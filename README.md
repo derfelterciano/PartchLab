@@ -1,2 +1,2 @@
 # PartchLab
-A repo for  my work witht he partch lab
+A repo for my work with the partch lab
