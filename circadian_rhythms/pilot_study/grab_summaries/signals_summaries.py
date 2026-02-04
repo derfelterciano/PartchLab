@@ -283,6 +283,8 @@ def main(in_opts=None):
         download_link=link, outName=out_name, auth=basic_auth, chunksize=chunksize
     )
 
+    ## Test code below
+
     # user = "pipeline"
     # password = "qdKlEDYXLt5q44eId"
     # test_uuid = "51059402-990a-11f0-a062-02420a00010d"
