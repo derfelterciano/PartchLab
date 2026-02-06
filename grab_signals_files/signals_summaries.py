@@ -72,7 +72,7 @@ def get_download_link(
     raw_cell_data: bool = False,
     verify: bool = False,
     attemps: int = 3,
-) -> str:
+) -> tuple[str, str]:
     """
     Grabs the appropriate download links from the signals summary response.
 
@@ -100,6 +100,7 @@ def get_download_link(
                 else:
                     json_data = dataset_resp.json()
 
+                    name = json_data["plate_name"]
                     if not raw_cell_data:
                         results_download = json_data["results"][0]["download"]
                         # print(json.dumps(json_data, indent=2))
@@ -118,7 +119,7 @@ def get_download_link(
                         ]
 
                     logging.info(f"Found download for {uuid}")
-                    return results_download
+                    return results_download, name
 
         except Exception as e:
             logging.error(f"<get_download_link> : {type(e)}: {e}")
@@ -225,6 +226,15 @@ class CommandLine:
         )
 
         self.parser.add_argument(
+            "-n",
+            "--name",
+            action="store_true",
+            default=False,
+            required=False,
+            help="Uses plate name to name file instead of uuid.",
+        )
+
+        self.parser.add_argument(
             "--chunksize",
             action="store",
             required=False,
@@ -262,6 +272,7 @@ def main(in_opts=None):
     raw_cell_data = cl.args.celldata
     chunksize = cl.args.chunksize
     attempts = cl.args.attempts
+    plate_name = cl.args.name
 
     basic_auth = HTTPBasicAuth(username=user, password=password)
 
@@ -271,12 +282,16 @@ def main(in_opts=None):
 
     logging.info("Successfully connected to signals!")
 
-    link = get_download_link(
+    link, name = get_download_link(
         uuid=uuid, auth=basic_auth, raw_cell_data=raw_cell_data, attemps=attempts
     )
 
     out_name_type = "cellByCell_data" if raw_cell_data else "wellSummaries"
-    out_name = f"{uuid}_{out_name_type}.tsv"
+    if not plate_name:
+        out_name = f"{uuid}_{out_name_type}.tsv"
+    else:
+        out_name = f"{name}_{out_name_type}.tsv"
+
     out_name = os.path.join(output, out_name)
 
     _ = save_file(
