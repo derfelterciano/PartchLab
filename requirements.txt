@@ -7,7 +7,7 @@ async-lru==2.0.5
 attrs==25.4.0
 babel==2.17.0
 beautifulsoup4==4.14.2
-biopython==1.85
+biopython==1.86
 bleach==6.3.0
 Bottleneck==1.4.2
 brotlicffi==1.2.0.0
@@ -57,6 +57,7 @@ mistune==3.1.2
 mkl_fft==2.1.1
 mkl_random==1.3.0
 mkl-service==2.5.2
+natsort==8.4.0
 nbclient==0.10.2
 nbconvert==7.16.6
 nbformat==5.10.4
@@ -67,7 +68,7 @@ numexpr==2.14.1
 numpy==2.4.1
 openpyxl==3.1.5
 packaging==25.0
-pandas==2.3.3
+pandas==3.0.0
 pandocfilters==1.5.1
 parso==0.8.5
 pexpect==4.9.0
@@ -106,6 +107,7 @@ tinycss2==1.4.0
 tornado==6.5.4
 tqdm==4.67.3
 traitlets==5.14.3
+treeview-generator==0.1.0
 typing_extensions==4.15.0
 tzdata==2025.3
 uri-template==1.3.0
