@@ -11,9 +11,9 @@ beautifulsoup4==4.14.2
 biopython==1.86
 bleach==6.3.0
 Bottleneck==1.4.2
-Brotli==1.2.0
+brotli==1.2.0
 brotlicffi==1.2.0.0
-cached-property==1.5.2
+cached-property==2.0.1
 certifi==2026.1.4
 cffi==2.0.0
 charset-normalizer==3.4.4
@@ -38,7 +38,7 @@ httpcore==1.0.9
 httpx==0.28.1
 hyperframe==6.1.0
 idna==3.11
-importlib_metadata==8.7.0
+importlib_metadata==8.7.1
 importlib_resources==6.5.2
 ipykernel==6.31.0
 ipython==9.7.0
@@ -69,7 +69,10 @@ MarkupSafe==3.0.2
 matplotlib==3.10.8
 matplotlib-inline==0.2.1
 mistune==3.1.2
-narwhals==2.15.0
+mkl_fft==2.1.1
+mkl_random==1.3.0
+mkl-service==2.5.2
+narwhals==2.18.0
 natsort==8.4.0
 nbclient==0.10.2
 nbconvert==7.16.6
@@ -89,7 +92,7 @@ pexpect==4.9.0
 pillow==12.1.1
 pip==25.3
 platformdirs==4.5.0
-plotly==6.5.2
+plotly==6.6.0
 prometheus_client==0.21.1
 prompt_toolkit==3.0.52
 psutil==7.0.0
@@ -97,8 +100,6 @@ ptyprocess==0.7.0
 pure_eval==0.2.3
 pycparser==2.21
 Pygments==2.19.2
-pyobjc-core==12.1
-pyobjc-framework-Cocoa==12.1
 pyparsing==3.3.2
 PySocks==1.7.1
 python-dateutil==2.9.0.post0
@@ -111,7 +112,7 @@ QtPy==2.4.3
 referencing==0.37.0
 requests==2.32.5
 rfc3339_validator==0.1.4
-rfc3986-validator==0.1.1
+rfc3986_validator==0.1.1
 rfc3987-syntax==1.1.0
 rpds-py==0.28.0
 scipy==1.17.0
@@ -130,7 +131,7 @@ tqdm==4.67.3
 traitlets==5.14.3
 treeview-generator==0.1.0
 typing_extensions==4.15.0
-typing_utils==0.1.0
+typing-utils==0.1.0
 tzdata==2025.3
 uri-template==1.3.0
 urllib3==2.6.3
