@@ -10,7 +10,7 @@ from tqdm import tqdm
 import logging
 from glob import glob
 
-from .utils import *
+from ..utils import *
 
 _QUANTILE_METHOD = "linear"
 _BATCH_SIZE = 250
@@ -119,7 +119,9 @@ def batch_summaries(
     return batch_files
 
 
-def merge_batches(batch_files: list[str], out_file: Path, index_keys: list[str]):
+def merge_batches(
+    batch_files: list[str], out_file: Path, index_keys: list[str]
+) -> None:
     """
     Merge all the batch parquet files together
 
@@ -154,3 +156,5 @@ def merge_batches(batch_files: list[str], out_file: Path, index_keys: list[str])
         final.write_csv(out_file)
     else:
         final.write_parquet(out_file)
+
+    return None
