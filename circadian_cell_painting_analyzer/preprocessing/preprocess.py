@@ -1,6 +1,7 @@
 #!/usr/env/bin python3
 
 from .aggregate import *
+import logging
 
 
 def preprocess_aggregation(

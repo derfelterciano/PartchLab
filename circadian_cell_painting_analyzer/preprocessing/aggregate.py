@@ -130,7 +130,7 @@ def merge_batches(
         - out_file (Path): a file path. files must end in .parquet OR .csv
     """
 
-    files = sorted(glob(f"{batch_files}/*.parquet"))
+    files = sorted(batch_files)
 
     dfs: list[DataFrame] = []
     for f in files:
