@@ -10,7 +10,7 @@ from tqdm import tqdm
 import logging
 from glob import glob
 
-from ..utils import *
+from ..utils import clean_folder
 
 _QUANTILE_METHOD = "linear"
 _BATCH_SIZE = 250
@@ -98,7 +98,7 @@ def batch_summaries(
 
     all_cols = pl.scan_csv(data_path, separator="\t").collect_schema().names()
     feats = [c for c in all_cols if c not in index_keys]
-    batches = [feats[i : i + _BATCH_SIZE] for i in range(0, len(all_cols), _BATCH_SIZE)]
+    batches = [feats[i : i + _BATCH_SIZE] for i in range(0, len(feats), _BATCH_SIZE)]
     logging.info(f"{len(feats)} features -> {len(batches)} batches of {_BATCH_SIZE}")
 
     clean_folder(dump_outs)
@@ -119,9 +119,7 @@ def batch_summaries(
     return batch_files
 
 
-def merge_batches(
-    batch_files: list[str], out_file: Path, index_keys: list[str]
-) -> None:
+def merge_batches(batch_files: list[str], index_keys: list[str]) -> pl.LazyFrame:
     """
     Merge all the batch parquet files together
 
@@ -150,11 +148,6 @@ def merge_batches(
         )
         dfs.append(df)
 
-    final = pl.concat(dfs).sort(index_keys + ["feature"])
+    final = pl.concat(dfs).sort(index_keys + ["feature"]).lazy()
 
-    if out_file.suffix == ".csv":
-        final.write_csv(out_file)
-    else:
-        final.write_parquet(out_file)
-
-    return None
+    return final

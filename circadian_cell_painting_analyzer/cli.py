@@ -5,7 +5,7 @@ from typing import Annotated
 import logging
 import shutil
 
-from .preprocessing.preprocess import preprocess_aggregation
+from .preprocessing.preprocess import preprocess_to_clean_signal
 from .utils import clean_folder
 
 logging.basicConfig(level=logging.INFO)
@@ -37,24 +37,32 @@ def preprocess(
             help="output file name. " "(MUST END IN EITHER .parquet or .csv!"
         ),
     ],
-    index_keys: Annotated[
+    well_columns: Annotated[
         list[str],
         typer.Option(
-            "--keys",
-            "-k",
-            help="specifies the index columns i.e. WellName, Timepoint, Row, "
+            "--wellname",
+            "-w",
+            help="specifies the well columns i.e. WellName, Row, or Col "
             "or Column. You can specify more than 1 column",
+        ),
+    ],
+    timepoint_col: Annotated[
+        str,
+        typer.Option(
+            "--timepoint", "-t", help="specifies the timpoint column of the dataset"
         ),
     ],
 ):
     in_path = Path(input_path)
     out_path = Path(output)
     dump_dir = out_path.parent / ".temp_batches/"
-    clean_folder(dump_dir)
+    clean_folder(dump_dir)  # TODO: uncomment this
 
     if in_path.is_file():
-        preprocess_aggregation(in_path, index_keys, out_path, dump_dir)
-    else:
+        preprocess_to_clean_signal(
+            in_path, well_columns, timepoint_col, out_path, dump_dir
+        )
+    else:  # TODO: UNCOMMENT THIS BLOCK
         logging.error("Preprocess: this is something wrong with this input path!")
         shutil.rmtree(dump_dir)
         exit(1)
@@ -71,7 +79,7 @@ def preprocess(
     #     shutil.rmtree(dump_dir)
     #     exit(1)
 
-    shutil.rmtree(dump_dir)
+    shutil.rmtree(dump_dir)  # TODO: uncomment this
 
 
 if __name__ == "__main__":
