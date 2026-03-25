@@ -111,21 +111,34 @@ from tqdm import tqdm
 
 # ── Config ────────────────────────────────────────────────────────────────────
 TOP_N = 250
-WELL = "F7"
-STAT = "median"  # ← change this to 'median', 'stddev', 'q0', etc.
+WELL = "G12"
+STAT = "mean"  # ← change this to 'median', 'stddev', 'q0', etc.
 output_pdf = f"qc_fft_{WELL}_{STAT}.pdf"
+# source_path = Path(
+#     "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms"
+#     "/Live Study/preprocessed_data/2026-03-11CelPaint_PhenovNoTreatDex_"
+#     "HARMONY_FIXED.parquet"
+# )
+
 source_path = Path(
     "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms"
-    "/Live Study/preprocessed_data/2026-03-11CelPaint_PhenovNoTreatDex_"
-    "HARMONY_FIXED.parquet"
+    "/Live Study/preprocessed_data/2026-03-10CelPaint_ChromaNoTreatDex.parquet"
 )
 
 # ── Load data ─────────────────────────────────────────────────────────────────
+# df = (
+#     pl.scan_parquet(source_path)
+#     .filter(
+#         (pl.col("WellName") == WELL) & (~pl.col("feature").str.contains("Intensity"))
+#     )
+#     .select(["Timepoint", "feature", STAT])
+#     .sort(["feature", "Timepoint"])
+#     .collect()
+# )
+
 df = (
     pl.scan_parquet(source_path)
-    .filter(
-        (pl.col("WellName") == WELL) & (~pl.col("feature").str.contains("Intensity"))
-    )
+    .filter((pl.col("WellName") == WELL))
     .select(["Timepoint", "feature", STAT])
     .sort(["feature", "Timepoint"])
     .collect()
