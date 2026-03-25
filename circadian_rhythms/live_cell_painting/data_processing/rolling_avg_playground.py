@@ -11,11 +11,26 @@ import polars as pl
 from pathlib import Path
 from IPython.display import display
 
+# file_path = Path(
+#     "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study"
+#     "/preprocessed_data/2026-03-10CelPaint_ChromaNoTreatDex.parquet"
+# )
+
 file_path = Path(
-    "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study"
-    "/preprocessed_data/2026-03-10CelPaint_ChromaNoTreatDex.parquet"
+    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms"
+    "/Live Study/preprocessed_data/2026-03-10CelPaint_ChromaNoTreatDex.parquet"
 )
 print(file_path)
+
+# %% [markdown]
+### This will be for converting parquet to csv
+
+# %%
+lf = pl.scan_parquet(file_path)
+lf.sink_csv(
+    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
+    " Study/preprocessed_data/2026-03-10CelPaint_ChromaNoTreatDex.csv"
+)
 
 
 # %%
@@ -92,16 +107,25 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from tqdm import tqdm
 
+# NOTE: TAKE FOURIER TRANSFORM OF NOISE NOT CLEAN SIGNAL
+
 # ── Config ────────────────────────────────────────────────────────────────────
-TOP_N = 100
-WELL = "G12"
-STAT = "q50"  # ← change this to 'median', 'stddev', 'q0', etc.
+TOP_N = 250
+WELL = "F7"
+STAT = "median"  # ← change this to 'median', 'stddev', 'q0', etc.
 output_pdf = f"qc_fft_{WELL}_{STAT}.pdf"
+source_path = Path(
+    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms"
+    "/Live Study/preprocessed_data/2026-03-11CelPaint_PhenovNoTreatDex_"
+    "HARMONY_FIXED.parquet"
+)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 df = (
-    pl.scan_parquet("/home/derfelt/git_repos/PartchLab/detrend_data.parquet")
-    .filter(pl.col("WellName") == WELL)
+    pl.scan_parquet(source_path)
+    .filter(
+        (pl.col("WellName") == WELL) & (~pl.col("feature").str.contains("Intensity"))
+    )
     .select(["Timepoint", "feature", STAT])
     .sort(["feature", "Timepoint"])
     .collect()

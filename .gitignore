@@ -208,3 +208,5 @@ __marimo__/
 
 .vscode/
 .ropeproject/
+*.pdf
+.DS_Store
