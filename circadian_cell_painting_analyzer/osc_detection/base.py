@@ -22,6 +22,14 @@ class OscillationBase(ABC):
     def __init__(self) -> None:
         self._validate_schema()
 
+    @property
+    @abstractmethod
+    def params(self) -> dict:
+        """
+        Returns the models parameters
+        """
+        ...
+
     @abstractmethod
     def fit(
         self, timepoints: NDArray[np.float64], values: NDArray[np.float64]

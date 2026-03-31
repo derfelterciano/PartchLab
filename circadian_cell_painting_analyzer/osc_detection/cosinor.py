@@ -24,6 +24,10 @@ class CosinorDetection(OscillationBase):
         self.intervals = intervals
         super().__init__()
 
+    @property
+    def params(self) -> dict:
+        return {"period": self.period, "time_interval": self.intervals}
+
     def fit(
         self, timepoints: NDArray[np.float64], values: NDArray[np.float64]
     ) -> dict | None:

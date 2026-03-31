@@ -6,6 +6,7 @@ from .base import OscillationBase
 from .cosinor import CosinorDetection
 from pathlib import Path
 from tqdm import tqdm
+from ..utils import OscillationResults
 
 
 def detect(
@@ -16,11 +17,12 @@ def detect(
     timepoint_col: str,
     value_col: str,
     stat: str,
+    out_file: Path,
     alpha: float = 0.05,
     adj_method: str = "fdr_bh",
     correction_group: list[str] | None = None,
     detector: OscillationBase | None = None,
-) -> pl.DataFrame:
+) -> OscillationResults:
     """
     Run oscillation detection across all wells and features. This function
     also adjusts p-value based on a population defined `correction_group`
@@ -35,6 +37,7 @@ def detect(
         - timepoint_col (str): column name identifying the timepoint
         - value_col (str): column name of the stat value to fit (e.g. 'mean')
         - stat (str): label for the stat being tested, stored in results
+        - out_file (Path): the outfile of results as a .parquet file
         - correction_group (list[str]): platemap columns to group by for
           independent BH correction (e.g. ['cell_line', 'condition'])
         - alpha (float): significance threshold for BH correction (default 0.05)
@@ -92,7 +95,7 @@ def detect(
         results.append(result)
 
     if len(results) == 0:
-        return pl.DataFrame()
+        raise ValueError("detect(): NO RESULTS FOUND")
 
     combined_results: pl.DataFrame = pl.concat(results).join(
         pm, on=well_column, how="left"
@@ -102,7 +105,9 @@ def detect(
         _, p_adjusted, _, _ = multipletests(
             combined_results["p_value"], alpha=alpha, method=adj_method
         )
-        return combined_results.with_columns(pl.Series("p_adjusted", p_adjusted))
+        corrected_df = combined_results.with_columns(
+            pl.Series("p_adjusted", p_adjusted)
+        ).sort([well_column, "p_adjusted"], descending=False)
     else:
         corrected = []
         for group_vals, group_df in combined_results.group_by(correction_group):
@@ -116,7 +121,20 @@ def detect(
             [well_column, "p_adjusted"], descending=False
         )
 
-        return corrected_df
+    corrected_df.write_parquet(out_file)
+
+    return OscillationResults(
+        well_col=well_column,
+        feature_col=feature_col,
+        timepoint_col=timepoint_col,
+        value_col=value_col,
+        stat=stat,
+        results_path=out_file,
+        data_path=file_path,
+        period=detector.params.get("period", 24.0),
+        time_interval=detector.params.get("time_interval", 1.0),
+        correction_group=correction_group,
+    )
 
 
 # if __name__ == "__main__":
@@ -143,7 +161,7 @@ def detect(
 #         timepoint_col="Timepoint",
 #         value_col="mean",
 #         stat="mean",
-#         correction_group=["WellName"],
+#         correction_group=["cell line", "condition"],
 #         detector=model,
 #     )
 
