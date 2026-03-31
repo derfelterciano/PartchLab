@@ -57,3 +57,24 @@ lf = pl.scan_parquet(
 )
 
 display(lf.head(10).collect())
+# %%
+result.to_pickle(
+    Path(
+        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
+        "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+        "ONY_FIXED._.RESULT_OBJ.pickle"
+    )
+)
+
+# %%
+
+detection_results = OscillationResults.load_pickle(
+    Path(
+        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
+        "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+        "ONY_FIXED._.RESULT_OBJ.pickle"
+    )
+)
+
+print(detection_results.correction_group)
+display(detection_results.scan_results().filter(pl.col("p_adjusted") <= 0.05).collect())

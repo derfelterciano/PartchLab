@@ -8,6 +8,7 @@ import shutil
 from time import sleep
 from dataclasses import dataclass
 import polars as pl
+import pickle
 
 
 def clean_folder(dir: Path) -> None:
@@ -54,3 +55,16 @@ class OscillationResults:
 
     def load_result(self):
         return pl.read_parquet(self.results_path)
+
+    def to_pickle(self, path: Path) -> None:
+        """
+        Saves this object as a pickle file
+        """
+
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load_pickle(cls, path: Path) -> "OscillationResults":
+        with open(path, "rb") as f:
+            return pickle.load(f)
