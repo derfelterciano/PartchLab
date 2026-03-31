@@ -12,16 +12,23 @@ class CosinorDetection(OscillationBase):
     """
     Implements a simple cosinor detection method for circadian data
     https://pmc.ncbi.nlm.nih.gov/articles/PMC3663600/#S4
+
+    Params:
+        - period (int): period of time to detect (default: 24 hours)
+        - intervals (int): the interval of each timepoint in hours (default: 1 hour)
+
     """
 
-    def __init__(self, period: int = 24) -> None:
+    def __init__(self, period: int = 24, intervals: int = 1) -> None:
         self.period = period
+        self.intervals = intervals
         super().__init__()
 
     def fit(
         self, timepoints: NDArray[np.float64], values: NDArray[np.float64]
     ) -> dict | None:
         try:
+            timepoints = timepoints * self.intervals
             popt, _pcov = curve_fit(
                 self._cosinor,
                 timepoints,
