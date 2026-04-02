@@ -74,7 +74,7 @@ class VisualizerBase(ABC):
         )
 
     @abstractmethod
-    def plot_fit(self, ax, row: dict) -> None:
+    def plot_fit(self, ax: Axes, row: dict) -> None:
         """
         Overlays the model fit on a time series plot.
         Method specific — must be implemented by each visualizer.
