@@ -11,6 +11,8 @@ from circadian_cell_painting_analyzer.utils import OscillationResults
 import polars as pl
 from pathlib import Path
 
+from circadian_cell_painting_analyzer.visualize.cosinor_plot import CosinorVisualize
+
 data_path = Path(
     "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/"
     "preprocessed_data/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
@@ -51,12 +53,14 @@ result: OscillationResults = detect(
 if result is not None:
     print(result)
     # print(result.scan_results().head(2).collect())
+    #
 # %%
 lf = pl.scan_parquet(
     "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/results/2026-03-11CelPaint_PhenovNoTreatDex_HARMONY_FIXED._.RESULTS.parquet"
 )
 
 display(lf.head(10).collect())
+
 # %%
 result.to_pickle(
     Path(
@@ -78,3 +82,28 @@ detection_results = OscillationResults.load_pickle(
 
 print(detection_results.correction_group)
 display(detection_results.scan_results().filter(pl.col("p_adjusted") <= 0.05).collect())
+# %%
+from IPython.display import display
+from circadian_cell_painting_analyzer.osc_detection.detect import detect
+from circadian_cell_painting_analyzer.osc_detection.cosinor import CosinorDetection
+from circadian_cell_painting_analyzer.utils import OscillationResults
+import polars as pl
+from pathlib import Path
+
+from circadian_cell_painting_analyzer.visualize.cosinor_plot import CosinorVisualize
+
+detection_results = OscillationResults.load_pickle(
+    Path(
+        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
+        "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+        "ONY_FIXED._.RESULT_OBJ.pickle"
+    )
+)
+
+visualize = CosinorVisualize(detection_results)
+visualize.view(
+    out_dir=Path(
+        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/visuals/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+        "ONY_FIXED/"
+    )
+)

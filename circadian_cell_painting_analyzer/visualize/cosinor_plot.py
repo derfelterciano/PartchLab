@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from circadian_rhythms.live_cell_painting.data_processing.osc_detection import heat_data
+from matplotlib.backends.backend_pdf import PdfPages
 from .base import VisualizerBase
 from matplotlib import pyplot as plt
 from ..utils import OscillationResults
@@ -9,6 +9,7 @@ import polars as pl
 import numpy as np
 from matplotlib.axes import Axes
 import seaborn as sns
+from tqdm import tqdm
 
 
 class CosinorVisualize(VisualizerBase):
@@ -21,9 +22,19 @@ class CosinorVisualize(VisualizerBase):
         Plots/overlays the fitted curves from the analysis results
         No recalculation needed
         """
-        fitted = np.array(row["fitted"])
+        fitted = np.array(row["fitted"][0])
         n = len(fitted)
-        hours = np.arange(n) * self.results.time_interval
+        hours = (
+            self.results.scan_data()
+            .filter(
+                (pl.col(self.results.well_col) == row[self.results.well_col][0])
+                & (pl.col(self.results.feature_col) == row[self.results.feature_col][0])
+            )
+            .select(self.results.timepoint_col)
+            .sort(self.results.timepoint_col)
+            .collect()[self.results.timepoint_col]
+            .to_numpy()
+        ) * self.results.time_interval
 
         ax.plot(
             hours,
@@ -32,9 +43,9 @@ class CosinorVisualize(VisualizerBase):
             color="crimson",
             linewidth=2,
             label=(
-                f"cosinor fit\t"
-                f"amp={row['amplitude']:.4f}\t"
-                f"phase={np.degrees(row['phase'])} degrees"
+                f"cosinor fit    "
+                f"amp={row['amplitude'][0]:.4f}    "
+                f"phase={np.degrees(row['phase'][0]):.1f} degrees"
             ),
         )
 
@@ -60,4 +71,58 @@ class CosinorVisualize(VisualizerBase):
         return
 
     def view(self, out_dir: Path, alpha: float | None = None) -> None:
-        return
+        out_dir.mkdir(parents=True, exist_ok=True)
+        significants = self.get_significant(alpha)
+        wells = significants[self.results.well_col].unique().to_list()
+
+        for well in tqdm(wells, desc="well_processing", total=len(wells)):
+            well_sigs = significants.filter(pl.col(self.results.well_col) == well)
+
+            if well_sigs.is_empty():
+                continue
+
+            features = well_sigs[self.results.feature_col].to_list()
+            out_path = out_dir / f"{well}_{self.results.stat}.pdf"
+
+            with PdfPages(out_path) as pdf:
+                # page 1: summary heatmap
+
+                fig, ax = plt.subplots(figsize=(11, max(4, len(features) * 0.3)))
+                self.plot_summary(ax, well_sigs)
+                plt.tight_layout()
+                pdf.savefig(fig)
+                plt.close(fig)
+
+                for feat in tqdm(
+                    features,
+                    desc=f"progress of features for {well}",
+                    total=len(features),
+                ):
+                    row = well_sigs.filter(
+                        pl.col(self.results.feature_col) == feat
+                    ).to_dict(as_series=False)
+
+                    fig, ax = plt.subplots(figsize=(11, 4))
+
+                    # raw time series first
+                    self.plot_timeseries(ax, well, feat)
+
+                    # add the fit
+                    self.plot_fit(ax, row)
+
+                    ax.set_title(
+                        f"{feat}\n"
+                        f'p_adj={row["p_adjusted"][0]:.4e}  '
+                        f'amp={row["amplitude"][0]:.4f}  '
+                        f'phase={np.degrees(row["phase"][0]):.1f}(deg)  '
+                        f'baseline={row["baseline"][0]:.4f}'
+                    )
+
+                    ax.legend(fontsize=8)
+                    plt.tight_layout()
+                    pdf.savefig(fig)
+                    plt.close(fig)
+
+                d = pdf.infodict()
+                d["Title"] = f"Cosinor Results — {well} | {self.results.stat}"
+                d["Subject"] = "Circadian oscillation via cosinor fitting"
