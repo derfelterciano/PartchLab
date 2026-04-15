@@ -108,7 +108,10 @@ class OscillationBase(ABC):
                 .astype(np.float64)
             )
 
-            fit = self.fit(timepoints=time, values=values)
+            if np.all(values == 0):
+                fit = None
+            else:
+                fit = self.fit(timepoints=time, values=values)
 
             if fit is not None:
                 results.append(

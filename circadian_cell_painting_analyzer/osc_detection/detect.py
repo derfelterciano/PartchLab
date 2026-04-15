@@ -103,7 +103,7 @@ def detect(
 
     if correction_group is None:
         _, p_adjusted, _, _ = multipletests(
-            combined_results["p_value"], alpha=alpha, method=adj_method
+            combined_results["p_value"].to_numpy(), alpha=alpha, method=adj_method
         )
         corrected_df = combined_results.with_columns(
             pl.Series("p_adjusted", p_adjusted)
@@ -112,7 +112,7 @@ def detect(
         corrected = []
         for group_vals, group_df in combined_results.group_by(correction_group):
             _, p_adjusted, _, _ = multipletests(
-                group_df["p_value"], alpha=alpha, method=adj_method
+                group_df["p_value"].to_numpy(), alpha=alpha, method=adj_method
             )
 
             corrected.append(group_df.with_columns(pl.Series("p_adjusted", p_adjusted)))

@@ -5,6 +5,13 @@
 # We will use this for the analysis library
 
 from IPython.display import display
+import sys
+import os
+
+print(sys.path)
+print("Current Working Directory:", os.getcwd())
+sys.path.append("/Users/dterciano/Desktop/GitRepos/PartchLab/")
+
 from circadian_cell_painting_analyzer.osc_detection.detect import detect
 from circadian_cell_painting_analyzer.osc_detection.cosinor import CosinorDetection
 from circadian_cell_painting_analyzer.utils import OscillationResults
@@ -13,24 +20,45 @@ from pathlib import Path
 
 from circadian_cell_painting_analyzer.visualize.cosinor_plot import CosinorVisualize
 
+# MACOS
 data_path = Path(
-    "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/"
-    "preprocessed_data/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-    "ONY_FIXED.parquet"
+    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
+    " Study/preprocessed_data/2026-03-10CelPaint_ChromaNoTreatDex.parquet"
 )
 pm_path = Path(
-    "/home/derfelt/PartchLabFiles/Circadian"
-    " Rhythms/Live Study/2026-03-16CellPaint_map.xlsx"
+    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
+    " Study/2026-03-16CellPaint_map.xlsx"
 )
-
 out_path = Path(
-    "/home/derfelt/PartchLabFiles/Circadian"
-    " Rhythms/Live Study/results/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-    "ONY_FIXED._.RESULTS.parquet"
+    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live "
+    "Study/results/2026-03-10CelPaint_ChromaNoTreatDex"
+    "._.RESULTS.parquet"
 )
+# Windows
+
+# data_path = Path(
+#     "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/"
+#     "preprocessed_data/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+#     "ONY_FIXED.parquet"
+# )
+# pm_path = Path(
+#     "/home/derfelt/PartchLabFiles/Circadian"
+#     " Rhythms/Live Study/2026-03-16CellPaint_map.xlsx"
+# )
+
+# out_path = Path(
+#     "/home/derfelt/PartchLabFiles/Circadian"
+#     " Rhythms/Live Study/results/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+#     "ONY_FIXED._.RESULTS.parquet"
+# )
 
 pm = pl.read_excel(pm_path, engine="openpyxl")
 print(pm)
+
+# %%
+
+lf = pl.scan_parquet(data_path)
+print(lf.head(10).collect())
 
 # %%
 
@@ -52,8 +80,13 @@ result: OscillationResults = detect(
 # %%
 if result is not None:
     print(result)
-    # print(result.scan_results().head(2).collect())
-    #
+    print(result.scan_results().head(2).collect())
+    # result.scan_data().filter(
+    #     (pl.col("WellName") == "G19")
+    #     & (pl.col("feature").str.contains("ChromaLive640_blue Profile 4/5 SER-Spot"))
+    # ).collect().write_csv("test.csv")
+
+
 # %%
 lf = pl.scan_parquet(
     "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/results/2026-03-11CelPaint_PhenovNoTreatDex_HARMONY_FIXED._.RESULTS.parquet"
@@ -62,26 +95,46 @@ lf = pl.scan_parquet(
 display(lf.head(10).collect())
 
 # %%
+
+# result.to_pickle(
+#     Path(
+#         "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
+#         "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+#         "ONY_FIXED._.RESULT_OBJ.pickle"
+#     )
+# )
+
 result.to_pickle(
     Path(
-        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
-        "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-        "ONY_FIXED._.RESULT_OBJ.pickle"
+        "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
+        " Study/pickles/2026-03-10CelPaint_ChromaNoTreatDex._.RESULTS.pickle"
     )
 )
 
 # %%
 
+# detection_results = OscillationResults.load_pickle(
+#     Path(
+#         "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
+#         "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+#         "ONY_FIXED._.RESULT_OBJ.pickle"
+#     )
+# )
+
 detection_results = OscillationResults.load_pickle(
     Path(
-        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
-        "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-        "ONY_FIXED._.RESULT_OBJ.pickle"
+        "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
+        " Study/pickles/2026-03-10CelPaint_ChromaNoTreatDex._.RESULTS.pickle"
     )
 )
 
+
 print(detection_results.correction_group)
-display(detection_results.scan_results().filter(pl.col("p_adjusted") <= 0.05).collect())
+display(
+    detection_results.scan_results().filter((pl.col("p_adjusted") <= 0.05)).collect()
+)
+
+
 # %%
 from IPython.display import display
 from circadian_cell_painting_analyzer.osc_detection.detect import detect
@@ -92,18 +145,25 @@ from pathlib import Path
 
 from circadian_cell_painting_analyzer.visualize.cosinor_plot import CosinorVisualize
 
+# detection_results = OscillationResults.load_pickle(
+#     Path(
+#         "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
+#         "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
+#         "ONY_FIXED._.RESULT_OBJ.pickle"
+#     )
+# )
+
 detection_results = OscillationResults.load_pickle(
     Path(
-        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
-        "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-        "ONY_FIXED._.RESULT_OBJ.pickle"
+        "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
+        " Study/pickles/2026-03-10CelPaint_ChromaNoTreatDex._.RESULTS.pickle"
     )
 )
 
 visualize = CosinorVisualize(detection_results)
 visualize.view(
     out_dir=Path(
-        "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/visuals/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-        "ONY_FIXED/"
+        "/Users/dterciano/Desktop/PartchLabFiles/Ci"
+        "rcadianRhythms/Live Study/visuals/2026-03-10CelPaint_ChromaNoTreatDex"
     )
 )
