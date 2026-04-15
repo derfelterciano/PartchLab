@@ -298,21 +298,6 @@ def main(in_opts=None):
         download_link=link, outName=out_name, auth=basic_auth, chunksize=chunksize
     )
 
-    ## Test code below
-
-    # user = "pipeline"
-    # password = "qdKlEDYXLt5q44eId"
-    # test_uuid = "51059402-990a-11f0-a062-02420a00010d"
-    # basic_auth = HTTPBasicAuth(username=user, password=password)
-
-    # code = get_auth_validation(1.1, basic_auth)
-    # print(code)
-
-    # link = get_download_link(uuid=test_uuid, auth=basic_auth)
-    # print(link)
-
-    # save_file(link, outName="test.tsv", auth=basic_auth, chunksize=524288000)
-
 
 if __name__ == "__main__":
     main()
