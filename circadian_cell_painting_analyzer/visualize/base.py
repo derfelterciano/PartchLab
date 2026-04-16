@@ -57,7 +57,7 @@ class VisualizerBase(ABC):
 
         period = self.results.params.get("period", 24)
         period_marks = np.arange(
-            np.ceil(x_min / period) * period, x_max + period, period
+            np.ceil(x_min / period) * period, x_max + period, period / 2
         )
 
         for mark in period_marks:
