@@ -55,6 +55,7 @@ class OscillationBase(ABC):
 
         ALL SCHEMAS MUST CONTAIN:
             - `p_value: pl.Float64`
+            - `p_adjusted: pl.Float64`
 
         If possible, try to define:
             - `fitted: pl.List(pl.Float64)`: This is for the fitted curve
@@ -62,9 +63,13 @@ class OscillationBase(ABC):
         ...
 
     def _validate_schema(self) -> None:
-        if "p_value" not in self.result_schema:
+        if (
+            "p_value" not in self.result_schema
+            and "p_adjusted" not in self.result_schema
+        ):
             raise NotImplementedError(
-                f"{self.__class__.__name__}.results_schema must include 'p_value: pl.Float64'"
+                f"{self.__class__.__name__}.results_schema must "
+                "include 'p_value: pl.Float64' and 'p_adjusted: pl.Float64'"
             )
 
     def fit_all(

@@ -131,9 +131,8 @@ def detect(
         stat=stat,
         results_path=out_file,
         data_path=file_path,
-        period=detector.params.get("period", 24.0),
-        time_interval=detector.params.get("time_interval", 1.0),
         correction_group=correction_group,
+        detector_params=detector.params,
     )
 
 

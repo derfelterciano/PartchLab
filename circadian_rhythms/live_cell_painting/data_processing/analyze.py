@@ -2,16 +2,9 @@
 
 # %%
 
-# We will use this for the analysis library
+# This will be our official analysis
 
 from IPython.display import display
-import sys
-import os
-
-print(sys.path)
-print("Current Working Directory:", os.getcwd())
-sys.path.append("/Users/dterciano/Desktop/GitRepos/PartchLab/")
-
 from circadian_cell_painting_analyzer.osc_detection.detect import detect
 from circadian_cell_painting_analyzer.osc_detection.cosinor import CosinorDetection
 from circadian_cell_painting_analyzer.utils import OscillationResults
@@ -20,150 +13,66 @@ from pathlib import Path
 
 from circadian_cell_painting_analyzer.visualize.cosinor_plot import CosinorVisualize
 
-# MACOS
-data_path = Path(
-    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
-    " Study/preprocessed_data/2026-03-10CelPaint_ChromaNoTreatDex.parquet"
+# datasets
+data_dir = Path(
+    "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/preprocessed_data"
 )
+
+# platemaps
 pm_path = Path(
-    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
+    "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live"
     " Study/2026-03-16CellPaint_map.xlsx"
 )
-out_path = Path(
-    "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live "
-    "Study/results/2026-03-10CelPaint_ChromaNoTreatDex"
-    "._.RESULTS.parquet"
-)
-# Windows
+platemap = pl.read_excel(pm_path, engine="openpyxl")
+# display(platemap)
 
-# data_path = Path(
-#     "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/"
-#     "preprocessed_data/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-#     "ONY_FIXED.parquet"
-# )
-# pm_path = Path(
-#     "/home/derfelt/PartchLabFiles/Circadian"
-#     " Rhythms/Live Study/2026-03-16CellPaint_map.xlsx"
-# )
 
-# out_path = Path(
-#     "/home/derfelt/PartchLabFiles/Circadian"
-#     " Rhythms/Live Study/results/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-#     "ONY_FIXED._.RESULTS.parquet"
-# )
-
-pm = pl.read_excel(pm_path, engine="openpyxl")
-print(pm)
-
-# %%
-
-lf = pl.scan_parquet(data_path)
-print(lf.head(10).collect())
-
-# %%
-
-model = CosinorDetection(period=24, intervals=3)
-
-result: OscillationResults = detect(
-    file_path=data_path,
-    platemap_path=pm,
-    out_file=out_path,
-    well_column="WellName",
-    feature_col="feature",
-    timepoint_col="Timepoint",
-    value_col="mean",
-    stat="mean",
-    correction_group=["cell line", "condition"],
-    detector=model,
+analysis_results_dir = Path(
+    "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/results"
 )
 
-# %%
-if result is not None:
-    print(result)
-    print(result.scan_results().head(2).collect())
-    # result.scan_data().filter(
-    #     (pl.col("WellName") == "G19")
-    #     & (pl.col("feature").str.contains("ChromaLive640_blue Profile 4/5 SER-Spot"))
-    # ).collect().write_csv("test.csv")
+pickle_dir = Path("/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/pickles")
 
-
-# %%
-lf = pl.scan_parquet(
-    "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/results/2026-03-11CelPaint_PhenovNoTreatDex_HARMONY_FIXED._.RESULTS.parquet"
+visual_results_dir = Path(
+    "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live Study/visuals"
 )
 
-display(lf.head(10).collect())
+model = CosinorDetection(period=24, intervals=3, time_offset=24, start_index=1)
 
-# %%
+for dataset in data_dir.iterdir():
+    print(dataset)
 
-# result.to_pickle(
-#     Path(
-#         "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
-#         "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-#         "ONY_FIXED._.RESULT_OBJ.pickle"
-#     )
-# )
+    file_name = dataset.stem
+    print(file_name)
 
-result.to_pickle(
-    Path(
-        "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
-        " Study/pickles/2026-03-10CelPaint_ChromaNoTreatDex._.RESULTS.pickle"
+    out_file = analysis_results_dir / f"{file_name}._.RESULTS.parquet"
+
+    result: OscillationResults = detect(
+        file_path=dataset,
+        platemap_path=platemap,
+        out_file=out_file,
+        well_column="WellName",
+        feature_col="feature",
+        timepoint_col="Timepoint",
+        value_col="mean",
+        stat="mean",
+        correction_group=["cell line", "condition"],
+        detector=model,
     )
-)
 
-# %%
-
-# detection_results = OscillationResults.load_pickle(
-#     Path(
-#         "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
-#         "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-#         "ONY_FIXED._.RESULT_OBJ.pickle"
-#     )
-# )
-
-detection_results = OscillationResults.load_pickle(
-    Path(
-        "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
-        " Study/pickles/2026-03-10CelPaint_ChromaNoTreatDex._.RESULTS.pickle"
-    )
-)
-
-
-print(detection_results.correction_group)
-display(
-    detection_results.scan_results().filter((pl.col("p_adjusted") <= 0.05)).collect()
-)
+    pickle_out = pickle_dir / f"{file_name}._.RESULT_OBJ.pickle"
+    result.to_pickle(pickle_out)
 
 
 # %%
-from IPython.display import display
-from circadian_cell_painting_analyzer.osc_detection.detect import detect
-from circadian_cell_painting_analyzer.osc_detection.cosinor import CosinorDetection
-from circadian_cell_painting_analyzer.utils import OscillationResults
-import polars as pl
-from pathlib import Path
 
-from circadian_cell_painting_analyzer.visualize.cosinor_plot import CosinorVisualize
+for pickles, dataset in zip(pickle_dir.iterdir(), data_dir.iterdir()):
 
-# detection_results = OscillationResults.load_pickle(
-#     Path(
-#         "/home/derfelt/PartchLabFiles/Circadian Rhythms/Live "
-#         "Study/pickles/2026-03-11CelPaint_PhenovNoTreatDex_HARM"
-#         "ONY_FIXED._.RESULT_OBJ.pickle"
-#     )
-# )
+    result_obs = OscillationResults.load_pickle(pickles)
 
-detection_results = OscillationResults.load_pickle(
-    Path(
-        "/Users/dterciano/Desktop/PartchLabFiles/CircadianRhythms/Live"
-        " Study/pickles/2026-03-10CelPaint_ChromaNoTreatDex._.RESULTS.pickle"
-    )
-)
+    dataset_name = dataset.stem
+    visualize_out = visual_results_dir / dataset_name
+    print(visualize_out)
 
-visualize = CosinorVisualize(detection_results)
-visualize.view(
-    out_dir=Path(
-        "/Users/dterciano/Desktop/PartchLabFiles/Ci"
-        "rcadianRhythms/Live Study/visuals/2026-03-10CelPaint_ChromaNoTreatDex"
-    )
-)
+    visualize = CosinorVisualize(result_obs)
+    visualize.view(visualize_out)

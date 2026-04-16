@@ -34,7 +34,10 @@ class CosinorVisualize(VisualizerBase):
             .sort(self.results.timepoint_col)
             .collect()[self.results.timepoint_col]
             .to_numpy()
-        ) * self.results.time_interval
+        )
+        hours = self.results.params.get("time_offset", 0) + (
+            hours - self.results.params.get("start_index", 0)
+        ) * self.results.params.get("time_interval", 1)
 
         ax.plot(
             hours,

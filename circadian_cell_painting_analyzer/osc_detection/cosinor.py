@@ -16,23 +16,42 @@ class CosinorDetection(OscillationBase):
     Params:
         - period (int): period of time to detect (default: 24 hours)
         - intervals (int): the interval of each timepoint in hours (default: 1 hour)
+        - time_offset (int):
+            the offset time (in hours) for experiment (default: 0)
+        - start_index (int):
+            if the timepoints are in 0 or 1 indexing (or another unit) (default: 0)
 
     """
 
-    def __init__(self, period: int = 24, intervals: int = 1) -> None:
+    def __init__(
+        self,
+        period: int = 24,
+        intervals: int = 1,
+        time_offset: int = 0,
+        start_index: int = 0,
+    ) -> None:
         self.period = period
         self.intervals = intervals
+        self.time_offset = time_offset
+        self.start_index = start_index
         super().__init__()
 
     @property
     def params(self) -> dict:
-        return {"period": self.period, "time_interval": self.intervals}
+        return {
+            "period": self.period,
+            "time_interval": self.intervals,
+            "time_offset": self.time_offset,
+            "start_index": self.start_index,
+        }
 
     def fit(
         self, timepoints: NDArray[np.float64], values: NDArray[np.float64]
     ) -> dict | None:
         try:
-            timepoints = timepoints * self.intervals
+            timepoints = (
+                self.time_offset + (timepoints - self.start_index) * self.intervals
+            )  # adjusts timepoints based on experiment parameters
             popt, _pcov = curve_fit(
                 self._cosinor,
                 timepoints,

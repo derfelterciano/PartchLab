@@ -5,6 +5,7 @@ import polars as pl
 from abc import ABC, abstractmethod
 from pathlib import Path
 from ..utils import OscillationResults
+import numpy as np
 
 
 class VisualizerBase(ABC):
@@ -34,10 +35,11 @@ class VisualizerBase(ABC):
             .collect()
         )
 
-        hours = (
-            clean_data[self.results.timepoint_col].to_numpy()
-            * self.results.time_interval
-        )
+        hours = clean_data[self.results.timepoint_col].to_numpy()
+        hours = self.results.params.get("time_offset", 0) + (
+            hours - self.results.params.get("start_index", 0)
+        ) * self.results.params.get("time_interval", 1)
+
         values = clean_data[self.results.value_col].to_numpy()
 
         ax.plot(
@@ -49,7 +51,23 @@ class VisualizerBase(ABC):
             linewidth=5,
             label="detrended data",
         )
+
+        x_min = hours.min()
+        x_max = hours.max()
+
+        period = self.results.params.get("period", 24)
+        period_marks = np.arange(
+            np.ceil(x_min / period) * period, x_max + period, period
+        )
+
+        for mark in period_marks:
+            ax.axvline(mark, color="gray", linewidth=0.5, linestyle=":", alpha=0.5)
+
         ax.axhline(0, color="gray", linewidth=0.5, linestyle="--")
+
+        ax.set_xticks(period_marks)
+        ax.set_xticklabels([f"{int(m)}h" for m in period_marks])
+
         ax.set_xlabel("Time (hours)")
         ax.set_ylabel(f"Detrended {self.results.stat}")
 

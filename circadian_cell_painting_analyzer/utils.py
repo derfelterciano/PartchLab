@@ -9,6 +9,7 @@ from time import sleep
 from dataclasses import dataclass
 import polars as pl
 import pickle
+from typing import Any
 
 
 def clean_folder(dir: Path) -> None:
@@ -34,6 +35,9 @@ class OscillationResults:
     value_col: str
     stat: str
 
+    # model params
+    detector_params: dict[str, Any]
+
     # paths
     results_path: Path
     data_path: Path
@@ -41,8 +45,6 @@ class OscillationResults:
 
     # detction metrics
     detector_name: str = "CosinorFitting"
-    period: float = 24
-    time_interval: float = 1
     adj_alpha: float = 0.05
     adj_method: str = "fdr_bh"
     correction_group: list[str] | None = None
@@ -63,6 +65,10 @@ class OscillationResults:
 
         with open(path, "wb") as f:
             pickle.dump(self, f)
+
+    @property
+    def params(self):
+        return self.detector_params
 
     @classmethod
     def load_pickle(cls, path: Path) -> "OscillationResults":
