@@ -5,13 +5,14 @@
 # This will be our official analysis
 
 from IPython.display import display
-from circadian_cell_painting_analyzer.osc_detection.detect import detect
-from circadian_cell_painting_analyzer.osc_detection.cosinor import CosinorDetection
-from circadian_cell_painting_analyzer.utils import OscillationResults
+from circadian_cell_painting import (
+    detect,
+    CosinorDetection,
+    CosinorVisualize,
+    OscillationResults,
+)
 import polars as pl
 from pathlib import Path
-
-from circadian_cell_painting_analyzer.visualize.cosinor_plot import CosinorVisualize
 
 # datasets
 data_dir = Path(

@@ -54,3 +54,9 @@ The Significance of the oscillation was assessed using an F-test comparing the c
 **Testing correction**
 
 P-values were adjusted within every replicate group (n=3 wells per group) across all features using the Benjamini-Hochberg method to adjust the false discovery rate at $\alpha=0.05$.
+
+
+## Future directions and implementations
+
+- Implement JTK_CYCLE into python package
+- Preprocess data for unidentifiable/irregular periods (such as 30 hour)
