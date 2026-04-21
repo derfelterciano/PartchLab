@@ -50,6 +50,6 @@ def denoise_detrend(
         .with_columns(pass2)
         .with_columns(detrend)
         .drop(temp_cols)
-        .drop_nulls(subset=stat_cols)
+        .drop_nulls(subset=[c for c in stat_cols if c != "stddev"])
         .sort(index_keys + [feature_col])
     )

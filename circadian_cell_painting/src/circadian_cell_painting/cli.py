@@ -52,6 +52,14 @@ def preprocess(
             "--timepoint", "-t", help="specifies the timpoint column of the dataset"
         ),
     ],
+    window_size: Annotated[
+        int,
+        typer.Option(
+            "--window",
+            help="Specifies the window size (number of timepoints)"
+            " of the rolling average",
+        ),
+    ] = 8,
 ):
     in_path = Path(input_path)
     out_path = Path(output)
@@ -60,7 +68,12 @@ def preprocess(
 
     if in_path.is_file():
         preprocess_to_clean_signal(
-            in_path, well_columns, timepoint_col, out_path, dump_dir
+            in_path,
+            well_columns,
+            timepoint_col,
+            out_path,
+            dump_dir,
+            window_size=window_size,
         )
     else:  # TODO: UNCOMMENT THIS BLOCK
         logging.error("Preprocess: this is something wrong with this input path!")

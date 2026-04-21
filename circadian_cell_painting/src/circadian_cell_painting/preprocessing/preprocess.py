@@ -31,6 +31,7 @@ def preprocess_to_clean_signal(
     timepoint_col: str,
     out_file: Path,
     dump_path: Path,
+    window_size: int = 8,
 ):
     well_col = well_cols if isinstance(well_cols, list) else [well_cols]
     index_keys = well_col + [timepoint_col]
@@ -45,8 +46,13 @@ def preprocess_to_clean_signal(
     # lazily merge all the batch files together
     lf = merge_batches(paths, index_keys)
 
+    # clean_lf = lf
     clean_lf = denoise_detrend(
-        lf, feature_col="feature", well_col=well_col, timepoint_col=timepoint_col
+        lf,
+        feature_col="feature",
+        well_col=well_col,
+        timepoint_col=timepoint_col,
+        window_size=window_size,
     )
 
     if out_file.suffix == ".parquet":
