@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import polars as pl
+import logging
 
 
 def denoise_detrend(
@@ -20,6 +21,13 @@ def denoise_detrend(
         if c not in (set(group_keys) | set(index_keys))
     ]
 
+    # window size must always be odd
+    # if its even just add 1
+    if window_size % 2 == 0:
+        window_size += 1
+
+    logging.info(f"denoise/detrend: window size set to: {window_size} timepoints")
+
     pass1 = [  # first pass 24-hour rolling avg
         pl.col(stat)
         .rolling_mean(window_size, center=True, min_samples=window_size)
@@ -36,8 +44,12 @@ def denoise_detrend(
         for stat in stat_cols
     ]
 
+    logging.info("denoise/detrend: completed 2 pass rolling avg")
+
     # subtracting noise from war signal
     detrend = [pl.col(stat) - pl.col(f"{stat}_pass2") for stat in stat_cols]
+
+    logging.info("denoise/detrend: subtracted raw signal from noise")
 
     # temp cols
     temp_cols = [f"{stat}_pass2" for stat in stat_cols] + [
