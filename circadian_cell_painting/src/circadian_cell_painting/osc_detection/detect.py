@@ -97,8 +97,10 @@ def detect(
     if len(results) == 0:
         raise ValueError("detect(): NO RESULTS FOUND")
 
-    combined_results: pl.DataFrame = pl.concat(results).join(
-        pm, on=well_column, how="left"
+    combined_results: pl.DataFrame = (
+        pl.concat(results)
+        .join(pm, left_on="WellName", right_on=well_column, how="left")
+        .rename({"WellName": well_column})
     )
 
     if correction_group is None:
