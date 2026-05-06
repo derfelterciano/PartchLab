@@ -19,6 +19,38 @@ def clean_folder(dir: Path) -> None:
     dir.mkdir(parents=True, exist_ok=True)
 
 
+def cosinor_fitted_long(
+    results_lf: pl.LazyFrame,
+    timepoints: list[float | int],
+    timepoint_col: str,
+    feature: str | None = None,
+    feature_col: str = "feature",
+) -> pl.DataFrame:
+    """
+    Returns the results of ONLY the cosinor analysis with the fitted
+    column in long form
+
+    Args:
+        results_lf (pl.LazyFrame): A Lazy fram for the results of the cosinor
+            analysis
+        feature (str | None, optional): A specific feature to select. Defaults to None.
+
+    Returns:
+        _type_: Returns a dataframe with the exploded fitted column
+    """
+    if "fitted" not in results_lf.collect_schema().names():
+        raise KeyError(f"This is not a cosinor dataset as 'fitted' is not a column!")
+
+    if feature is not None:
+        results_lf = results_lf.filter(pl.col(feature_col) == feature)
+
+    results = results_lf.collect()
+
+    return results.with_columns(
+        pl.Series(timepoint_col, [timepoints] * len(results))
+    ).explode(["fitted", timepoint_col])
+
+
 @dataclass
 class OscillationResults:
     """

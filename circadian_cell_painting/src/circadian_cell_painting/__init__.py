@@ -7,7 +7,7 @@ circadian data
 
 from .osc_detection import CosinorDetection, OscillationBase, detect
 from .visualize import CosinorVisualize
-from .utils import OscillationResults
+from .utils import OscillationResults, cosinor_fitted_long
 
 __all__ = [
     "CosinorDetection",
@@ -15,4 +15,5 @@ __all__ = [
     "detect",
     "CosinorVisualize",
     "OscillationResults",
+    "cosinor_fitted_long",
 ]
