@@ -55,8 +55,16 @@ The Significance of the oscillation was assessed using an F-test comparing the c
 
 P-values were adjusted within every replicate group (n=3 wells per group) across all features using the Benjamini-Hochberg method to adjust the false discovery rate at $\alpha=0.05$.
 
-
 ## Future directions and implementations
 
 - Implement JTK_CYCLE into python package
 - Preprocess data for unidentifiable/irregular periods (such as 30 hour)
+
+# CURRENT OBJECTIVES (TODO)
+
+- [ ] Implement **damped cosinor equation**
+  - This should be relatively the same as the preivous cosinor base but with a
+    few minor tweaks
+- [ ] Implement `Lomb-Scargle` for period detection. We can only do this AFTER detrending.
+- [ ] Implement **fft's discrete cosinor transform**
+  - This is just a method to detect the periods in the experiment.
