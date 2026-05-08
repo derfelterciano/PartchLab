@@ -62,9 +62,10 @@ P-values were adjusted within every replicate group (n=3 wells per group) across
 
 # CURRENT OBJECTIVES (TODO)
 
-- [ ] Implement **damped cosinor equation**
+- [x] Implement **damped cosinor equation**
   - This should be relatively the same as the preivous cosinor base but with a
     few minor tweaks
+  - The dampened cosinor can be seen [here](https://www.biorxiv.org/content/10.1101/2022.07.04.498691v3) at equation `2.2`
 - [ ] Implement `Lomb-Scargle` for period detection. We can only do this AFTER detrending.
 - [ ] Implement **fft's discrete cosinor transform**
   - This is just a method to detect the periods in the experiment.
