@@ -200,6 +200,9 @@ websocket-client==1.8.0
 whatthepatch==1.0.7
 wheel==0.46.3
 widgetsnbextension==4.0.14
+xlrd==2.0.2
+xlsx2csv==0.8.6
+xlsxwriter==3.2.9
 yapf==0.43.0
 zipp==3.23.0
 zstandard==0.25.0
