@@ -18,6 +18,8 @@ def detect(
     value_col: str,
     stat: str,
     out_file: Path,
+    start_time: float | None = None,
+    end_time: float | None = None,
     alpha: float = 0.05,
     adj_method: str = "fdr_bh",
     correction_group: list[str] | None = None,
@@ -37,6 +39,10 @@ def detect(
         - timepoint_col (str): column name identifying the timepoint
         - value_col (str): column name of the stat value to fit (e.g. 'mean')
         - stat (str): label for the stat being tested, stored in results
+        - start_time (float | None): starts analysis at a given timepoint
+          which must be the same time unit as the input data (default: None)
+        - end_time (float | None): ends analysis at a given timepoint
+          which must be the same time unit as the input data (default: None)
         - out_file (Path): the outfile of results as a .parquet file
         - correction_group (list[str]): platemap columns to group by for
           independent BH correction (e.g. ['cell_line', 'condition'])
@@ -44,7 +50,7 @@ def detect(
         - adj_method (str): multiple testing correction method passed to
           statsmodels.stats.multitest.multipletests (default 'fdr_bh')
         - detector (OscillationBase): the oscillation detection function
-        to be used for analysis (default: CosinorDetection)
+          to be used for analysis (default: CosinorDetection)
 
     returns:
         pl.DataFrame: results for all wells with columns from `result_schema`,
@@ -77,8 +83,17 @@ def detect(
             .filter(pl.col(well_column) == well)
             .select([well_column, feature_col, timepoint_col, value_col])
             .sort([feature_col, timepoint_col])
-            .collect()
         )
+
+        if start_time is not None:
+            well_data = well_data.filter(pl.col(timepoint_col) >= start_time)
+        if end_time is not None:
+            well_data = well_data.filter(pl.col(timepoint_col) <= end_time)
+
+        well_data = well_data.collect()
+
+        if well_data.is_empty():
+            continue
 
         result = detector.fit_all(
             data=well_data,
@@ -134,6 +149,8 @@ def detect(
         results_path=out_file,
         data_path=file_path,
         correction_group=correction_group,
+        start_time=start_time,
+        end_time=end_time,
         detector_params=detector.params,
     )
 

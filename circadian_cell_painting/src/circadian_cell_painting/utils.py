@@ -80,6 +80,8 @@ class OscillationResults:
     adj_alpha: float = 0.05
     adj_method: str = "fdr_bh"
     correction_group: list[str] | None = None
+    start_time: float | None = None
+    end_time: float | None = None
 
     def scan_data(self):
         return pl.scan_parquet(self.data_path)
