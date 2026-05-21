@@ -7,6 +7,7 @@ from .cosinor import CosinorDetection
 from pathlib import Path
 from tqdm import tqdm
 from ..utils import OscillationResults
+from typing import Literal
 
 
 def detect(
@@ -153,6 +154,29 @@ def detect(
         end_time=end_time,
         detector_params=detector.params,
     )
+
+
+def detect_cosinor_multiperiod(
+    file_path: Path,
+    platemap_path: Path | pl.DataFrame,
+    period_column: str,
+    well_column: str,
+    feature_col: str,
+    timepoint_col: str,
+    value_col: str,
+    stat: str,
+    out_file: Path,
+    start_time: float | None = None,
+    end_time: float | None = None,
+    alpha: float = 0.05,
+    adj_method: str = "fdr_bh",
+    correction_group: list[str] | None = None,
+    damped_method: bool = False,
+):
+    if isinstance(platemap_path, Path):
+        pm = pl.read_csv(platemap_path)
+    else:
+        pm = platemap_path
 
 
 # if __name__ == "__main__":
