@@ -214,6 +214,7 @@ def detect_cosinor_multiperiod(
             print(f"No period found for well {well} — skipping")
             continue
         period = float(period_row.item())
+        # print(f"well: {well} | period: {period}")
 
         if damped_method:
             model = DampedCosinorDetection(
@@ -238,6 +239,9 @@ def detect_cosinor_multiperiod(
             stat=stat,
             well=well,
         )
+
+        if result.is_empty():
+            continue
 
         result = result.with_columns(pl.lit(period).alias("period"))
 

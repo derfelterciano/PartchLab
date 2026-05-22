@@ -201,7 +201,7 @@ class DampedCosinorDetection(OscillationBase):
                     [-np.inf, 0, 1e-6, -2 * np.pi],
                     [np.inf, np.inf, 1.0, 2 * np.inf],
                 ),
-                maxfev=10000,
+                maxfev=100_000,
             )
 
             residual_model = values - self._damped_cosinor(timepoints, *popt)
