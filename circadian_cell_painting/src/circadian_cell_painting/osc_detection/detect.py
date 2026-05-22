@@ -4,6 +4,7 @@ import polars as pl
 from statsmodels.stats.multitest import multipletests
 from .base import OscillationBase
 from .cosinor import CosinorDetection
+from .cosinor import DampedCosinorDetection
 from pathlib import Path
 from tqdm import tqdm
 from ..utils import OscillationResults
@@ -172,11 +173,124 @@ def detect_cosinor_multiperiod(
     adj_method: str = "fdr_bh",
     correction_group: list[str] | None = None,
     damped_method: bool = False,
-):
+    intervals: int = 1,
+    time_offset: int = 0,
+    start_index: int = 0,
+) -> OscillationResults:
     if isinstance(platemap_path, Path):
         pm = pl.read_csv(platemap_path)
     else:
         pm = platemap_path
+
+    wells = (
+        pl.scan_parquet(file_path)
+        .select(well_column)
+        .unique()
+        .collect()[well_column]
+        .to_list()
+    )
+
+    results = []
+    for well in tqdm(wells, total=len(wells), desc="wells"):
+        well_data = (
+            pl.scan_parquet(file_path)
+            .filter(pl.col(well_column) == well)
+            .select([well_column, feature_col, timepoint_col, value_col])
+            .sort([feature_col, timepoint_col])
+        )
+
+        if start_time is not None:
+            well_data = well_data.filter(pl.col(timepoint_col) >= start_time)
+        if end_time is not None:
+            well_data = well_data.filter(pl.col(timepoint_col) <= end_time)
+
+        well_data = well_data.collect()
+
+        if well_data.is_empty():
+            continue
+
+        period_row = pm.filter(pl.col(well_column) == well).select([period_column])
+        if period_row.is_empty() or period_row.item() is None:
+            print(f"No period found for well {well} — skipping")
+            continue
+        period = float(period_row.item())
+
+        if damped_method:
+            model = DampedCosinorDetection(
+                period=period,
+                intervals=intervals,
+                time_offset=time_offset,
+                start_index=start_index,
+            )
+        else:
+            model = CosinorDetection(
+                period=period,
+                intervals=intervals,
+                time_offset=time_offset,
+                start_index=start_index,
+            )
+
+        result = model.fit_all(
+            data=well_data,
+            feature_col=feature_col,
+            time_col=timepoint_col,
+            value_col=value_col,
+            stat=stat,
+            well=well,
+        )
+
+        result = result.with_columns(pl.lit(period).alias("period"))
+
+        results.append(result)
+
+    if len(results) == 0:
+        raise ValueError("detect_cosinor_multiperiod(): NO RESULTS FOUND")
+
+    combined_results: pl.DataFrame = (
+        pl.concat(results)
+        .join(pm, left_on="WellName", right_on=well_column, how="left")
+        .rename({"WellName": well_column})
+    )
+
+    if correction_group is None:
+        _, p_adjusted, _, _ = multipletests(
+            combined_results["p_value"].to_numpy(), alpha=alpha, method=adj_method
+        )
+        corrected_df = combined_results.with_columns(
+            pl.Series("p_adjusted", p_adjusted)
+        ).sort([well_column, "p_adjusted"], descending=False)
+    else:
+        corrected = []
+        for group_vals, group_df in combined_results.group_by(correction_group):
+            _, p_adjusted, _, _ = multipletests(
+                group_df["p_value"].to_numpy(), alpha=alpha, method=adj_method
+            )
+
+            corrected.append(group_df.with_columns(pl.Series("p_adjusted", p_adjusted)))
+
+        corrected_df: pl.DataFrame = pl.concat(corrected).sort(
+            [well_column, "p_adjusted"], descending=False
+        )
+
+    corrected_df.write_parquet(out_file)
+
+    return OscillationResults(
+        well_col=well_column,
+        feature_col=feature_col,
+        timepoint_col=timepoint_col,
+        value_col=value_col,
+        stat=stat,
+        results_path=out_file,
+        data_path=file_path,
+        platemap=pm,
+        detector_name="DampedCosinorFitting" if damped_method else "CosinorFitting",
+        adj_alpha=alpha,
+        adj_method=adj_method,
+        correction_group=correction_group,
+        start_time=start_time,
+        end_time=end_time,
+        detector_params=model.params,
+    )
 
 
 # if __name__ == "__main__":
