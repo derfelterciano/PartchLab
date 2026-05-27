@@ -69,3 +69,7 @@ P-values were adjusted within every replicate group (n=3 wells per group) across
 - [ ] Implement `Lomb-Scargle` for period detection. We can only do this AFTER detrending.
 - [ ] Implement **fft's discrete cosinor transform**
   - This is just a method to detect the periods in the experiment.
+  - We still need to implement this as a package
+- [ ] Implement `JTK_CYCLE` since our data has period drift we need to use this
+      to everything more robust
+- [ ] Use wavelet analysis from `pyBoat`
