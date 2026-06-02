@@ -13,8 +13,9 @@ class VisualizerBase(ABC):
     This will be the base used for all visualization classes
     """
 
-    def __init__(self, results: OscillationResults):
+    def __init__(self, results: OscillationResults, tick_interval: float = 12):
         self.results = results
+        self.tick_interval = tick_interval
 
     def plot_timeseries(self, ax: Axes, well: str, feature: str) -> None:
         """
@@ -55,9 +56,11 @@ class VisualizerBase(ABC):
         x_min = hours.min()
         x_max = hours.max()
 
-        period = self.results.params.get("period", 24)
+        # period = self.results.params.get("period", 24)
         period_marks = np.arange(
-            np.ceil(x_min / period) * period, x_max + period, period / 2
+            np.ceil(x_min / self.tick_interval) * self.tick_interval,
+            x_max + self.tick_interval,
+            self.tick_interval,
         )
 
         for mark in period_marks:
