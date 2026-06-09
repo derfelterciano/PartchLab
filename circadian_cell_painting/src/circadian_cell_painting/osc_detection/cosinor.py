@@ -91,7 +91,7 @@ class CosinorDetection(OscillationBase):
             "baseline": pl.Float64(),
             "amplitude": pl.Float64(),
             "phase": pl.Float64(),
-            "pahse_hours": pl.Float64(),
+            "phase_hours": pl.Float64(),
             "p_value": pl.Float64(),
             "f_stat": pl.Float64(),
             "ss_model": pl.Float64(),
