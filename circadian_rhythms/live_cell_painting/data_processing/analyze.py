@@ -48,6 +48,8 @@ for dataset in data_dir.iterdir():
 
     out_file = analysis_results_dir / f"{file_name}._.RESULTS.parquet"
 
+    # I will be using median for this
+
     result: OscillationResults = detect(
         file_path=dataset,
         platemap_path=platemap,
