@@ -17,6 +17,7 @@ class OscillationBase(ABC):
     *MUST IMPLEMENT*:
     - `fit()`
     - `result_schema`
+    - `params`
     """
 
     def __init__(self) -> None:

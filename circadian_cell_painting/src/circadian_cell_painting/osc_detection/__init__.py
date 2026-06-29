@@ -4,6 +4,7 @@ from .base import OscillationBase
 from .cosinor import CosinorDetection, DampedCosinorDetection
 from .detect import detect
 from .detect import detect_cosinor_multiperiod
+from .ejtk_cycle import eJTK_CYCLE
 
 __all__ = [
     "OscillationBase",
@@ -11,4 +12,5 @@ __all__ = [
     "DampedCosinorDetection",
     "detect",
     "detect_cosinor_multiperiod",
+    "eJTK_CYCLE",
 ]
