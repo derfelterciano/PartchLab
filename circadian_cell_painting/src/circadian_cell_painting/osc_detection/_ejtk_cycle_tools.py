@@ -172,13 +172,13 @@ def init_ref_cosines(periods: list[int], n_timepoints: int) -> dict:
             cgoosv_cols.append(lower)
             signcos_cols.append(np.sign(cos_v[:full_range]))
 
-        ref[pi] = (np.column_stack(cgoosv_cols), np.column_stack(cgoosv_cols))
+        ref[pi] = (np.column_stack(cgoosv_cols), np.column_stack(signcos_cols))
 
     return ref
 
 
 def compute_best_tau(
-    values: np.ndarray, periods: list[int], ref_cosines: dict, dist_params: list[dict]
+    values: np.ndarray, periods: list[int], ref_cosines: dict, dist_params: dict
 ) -> tuple[float, float, int, float, float]:
     """
     Computes the best tau across all (period, phase) combinations.
@@ -204,7 +204,7 @@ def compute_best_tau(
 
     for pi, period in enumerate(periods):
         cgoosv, _ = ref_cosines[pi]
-        dp = dist_params[pi]
+        dp = dist_params
         S_all = foosv @ cgoosv
         for lagi in range(period):
             S = float(S_all[lagi])
@@ -228,9 +228,9 @@ def compute_best_tau(
         lagi = all_lagi[idx]
         period = periods[pi]
         S = all_S[idx]
-        dp = dist_params[pi]
+        dp = dist_params
 
-        s = np.sign(s) if S != 0 else 1.0
+        s = np.sign(S) if S != 0 else 1.0
         lag = (period + (1 - s) * period / 4 - lagi / 2) % period
 
         _, signcos = ref_cosines[pi]
@@ -242,7 +242,7 @@ def compute_best_tau(
 
         if amp > best_amp:
             best_amp = amp
-            best_tau = abs(s) / dp["max"]
+            best_tau = abs(S) / dp["max"]
             best_per = period
             best_lag_h = lag
 

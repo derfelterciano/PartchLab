@@ -31,15 +31,15 @@ class eJTK_CYCLE(OscillationBase):
         n_perms: int = 500,
         n_workers: int = 4,
     ):
-        self.periods = (periods,)
-        self.interval = (interval,)
-        self.time_offset = (time_offset,)
-        self.start_index = (start_index,)
-        self.n_perms = (n_perms,)
+        self.periods = periods
+        self.interval = interval
+        self.time_offset = time_offset
+        self.start_index = start_index
+        self.n_perms = n_perms
         self.n_workers = n_workers
 
         self._ref_cosines: dict | None = None
-        self._dist_parms: dict | None = None
+        self._dist_params: dict | None = None
         self._n_timepoints: int | None = None
 
         super().__init__()
@@ -144,7 +144,7 @@ class eJTK_CYCLE(OscillationBase):
 
         self._n_timepoints = n_timepoints
         self._ref_cosines = init_ref_cosines(self.periods, n_timepoints)
-        self._dist_parms = _build_dist_params(n_timepoints)
+        self._dist_params = _build_dist_params(n_timepoints)
 
     def fit(self, timepoints, values):
         self._jtk_init(len(timepoints))

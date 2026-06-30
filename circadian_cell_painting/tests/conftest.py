@@ -11,6 +11,7 @@ from circadian_cell_painting.osc_detection._ejtk_cycle_tools import (
     hlm,
     _s_to_pvalue,
 )
+import numpy as np
 
 
 @pytest.fixture
@@ -44,3 +45,25 @@ def ref_48tp(periods):
 @pytest.fixture
 def periods():
     return list(range(10, 15))
+
+
+@pytest.fixture
+def ref_cosines_48(periods):
+    return init_ref_cosines(periods, 48)
+
+
+@pytest.fixture
+def dist_params_48():
+    return _build_dist_params(48)
+
+
+@pytest.fixture
+def clean_cosine_24h():
+    """Clean 24h cosine @ 2h intervals, n=48"""
+    t = np.arange(0, 96, 2, dtype=float)
+    return np.cos(2 * np.pi * t / 24)
+
+
+@pytest.fixture
+def flat_signal():
+    return np.ones(48)
