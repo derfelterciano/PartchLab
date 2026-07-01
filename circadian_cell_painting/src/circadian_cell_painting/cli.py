@@ -60,11 +60,20 @@ def preprocess(
             " of the rolling average",
         ),
     ] = 8,
+    formatting: Annotated[
+        bool,
+        typer.Option(
+            "--format",
+            "-f",
+            help="If set, only calculates cell summaries instead of detrending",
+        ),
+    ] = False,
 ):
     in_path = Path(input_path)
     out_path = Path(output)
     dump_dir = out_path.parent / ".temp_batches/"
     clean_folder(dump_dir)  # TODO: uncomment this
+    detrend = not formatting
 
     if in_path.is_file():
         preprocess_to_clean_signal(
@@ -74,6 +83,7 @@ def preprocess(
             out_path,
             dump_dir,
             window_size=window_size,
+            detrend=detrend,
         )
     else:  # TODO: UNCOMMENT THIS BLOCK
         logging.error("Preprocess: this is something wrong with this input path!")
