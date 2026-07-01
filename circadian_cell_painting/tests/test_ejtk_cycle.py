@@ -175,3 +175,237 @@ class TestComputeBestTau:
             -clean_cosine_24h, periods, ref_cosines_48, dist_params_48
         )
         assert tau_pos == pytest.approx(tau_neg, abs=1e-6)
+
+
+class TestEjtkFitSingle:
+
+    # ── basic structure
+
+    def test_returns_dict(self, model, clean_cosine_24h, periods, ref_and_dist):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        assert isinstance(result, dict)
+
+    def test_required_keys(self, model, clean_cosine_24h, periods, ref_and_dist):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        expected = {"p_value", "adj_p_jtk", "period", "phase_hours", "amplitude", "tau"}
+        assert expected.issubset(result.keys())
+
+    # ── value ranges
+
+    def test_pvalue_in_0_1(self, model, clean_cosine_24h, periods, ref_and_dist):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        assert 0.0 < result["p_value"] <= 1.0
+
+    def test_tau_in_0_1(self, model, clean_cosine_24h, periods, ref_and_dist):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        assert 0.0 <= result["tau"] <= 1.0
+
+    def test_amplitude_nonnegative(
+        self, model, clean_cosine_24h, periods, ref_and_dist
+    ):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        assert result["amplitude"] >= 0.0
+
+    def test_period_in_hours_range(
+        self, model, clean_cosine_24h, periods, ref_and_dist
+    ):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        # periods 10-14 tp * 2h interval = 20-28h
+        assert 20.0 <= result["period"] <= 28.0
+
+    # ── p-value floor
+
+    def test_pvalue_never_zero(self, model, clean_cosine_24h, periods, ref_and_dist):
+        """p_value should be floored at 1/n_perms, never exactly 0"""
+        ref_cosines, dist_params = ref_and_dist
+        n_perms = 20
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=n_perms,
+            n_workers=2,
+        )
+        assert result["p_value"] >= 1.0 / n_perms
+
+    # ── biological sanity
+
+    def test_clean_rhythm_significant(
+        self, model, clean_cosine_24h, periods, ref_and_dist
+    ):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=100,
+            n_workers=2,
+        )
+        assert (
+            result["p_value"] < 0.05
+        ), f"Clean cosine should be significant, got p={result['p_value']:.3f}"
+
+    def test_random_noise_less_significant(
+        self, model, random_signal, periods, ref_and_dist
+    ):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=random_signal,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=100,
+            n_workers=2,
+        )
+        assert (
+            result["p_value"] > 0.01
+        ), f"Random noise should not be highly significant, got p={result['p_value']:.3f}"
+
+    def test_recovers_correct_period(
+        self, model, clean_cosine_24h, periods, ref_and_dist
+    ):
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        assert (
+            abs(result["period"] - 24.0) <= 4.0
+        ), f"Expected period ~24h, got {result['period']:.1f}h"
+
+    # ── error handling
+
+    def test_returns_none_on_bad_input(self, model, periods, ref_and_dist):
+        """Should return None (not raise) on invalid input due to try/except"""
+        ref_cosines, dist_params = ref_and_dist
+        result = model._ejtk_fit_single(
+            values=None,  # invalid input
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=20,
+            n_workers=2,
+        )
+        assert result is None
+
+    # ── reproducibility
+
+    def test_same_seed_same_result(
+        self, model, clean_cosine_24h, periods, ref_and_dist
+    ):
+        ref_cosines, dist_params = ref_and_dist
+        r1 = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=50,
+            n_workers=2,
+            rng_seed=42,
+        )
+        r2 = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=50,
+            n_workers=2,
+            rng_seed=42,
+        )
+        assert r1["p_value"] == pytest.approx(r2["p_value"])
+        assert r1["tau"] == pytest.approx(r2["tau"])
+
+    def test_tau_deterministic_across_seeds(
+        self, model, clean_cosine_24h, periods, ref_and_dist
+    ):
+        """tau/period should be identical regardless of rng_seed (observed stat, not permuted)"""
+        ref_cosines, dist_params = ref_and_dist
+        r1 = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=50,
+            n_workers=2,
+            rng_seed=1,
+        )
+        r2 = model._ejtk_fit_single(
+            values=clean_cosine_24h,
+            periods=periods,
+            ref_cosines=ref_cosines,
+            dist_params=dist_params,
+            interval=2.0,
+            n_perms=50,
+            n_workers=2,
+            rng_seed=2,
+        )
+        assert r1["tau"] == pytest.approx(r2["tau"])
+        assert r1["period"] == pytest.approx(r2["period"])

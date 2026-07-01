@@ -67,6 +67,7 @@ class eJTK_CYCLE(OscillationBase):
         }
 
     def _ejtk_fit_single(
+        self,
         values: np.ndarray,
         periods: list[int],
         ref_cosines: dict,

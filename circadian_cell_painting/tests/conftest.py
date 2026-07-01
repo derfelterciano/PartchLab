@@ -11,6 +11,7 @@ from circadian_cell_painting.osc_detection._ejtk_cycle_tools import (
     hlm,
     _s_to_pvalue,
 )
+from circadian_cell_painting.osc_detection import eJTK_CYCLE
 import numpy as np
 
 
@@ -67,3 +68,20 @@ def clean_cosine_24h():
 @pytest.fixture
 def flat_signal():
     return np.ones(48)
+
+
+@pytest.fixture
+def model(periods):
+    return eJTK_CYCLE(periods=periods, interval=2.0, n_perms=50, n_workers=2)
+
+
+@pytest.fixture
+def random_signal():
+    return np.random.default_rng(0).normal(0, 1, 48)
+
+
+@pytest.fixture
+def ref_and_dist(model, clean_cosine_24h):
+    """Forcing lazy init"""
+    model._jtk_init(len(clean_cosine_24h))
+    return model._ref_cosines, model._dist_params
