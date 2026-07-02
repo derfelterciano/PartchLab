@@ -9,6 +9,10 @@ from ._ejtk_cycle_tools import (
     compute_best_tau,
     init_ref_cosines,
 )
+from ._ejtk_cycle_curve_fits import (
+    construct_raw_jtk_curve,
+    jtk_fixed_period_cosinor_regression,
+)
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -58,16 +62,25 @@ class eJTK_CYCLE(OscillationBase):
     @property
     def result_schema(self):
         return {
-            "p_value": pl.Float64,  # empirical p-value
-            "adj_p_jtk": pl.Float64,  # Bonferroni JTK p (reference)
-            "period": pl.Float64,  # hours
-            "phase_hours": pl.Float64,  # hours to peak within cycle
-            "amplitude": pl.Float64,  # Hodges-Lehmann amplitude
-            "tau": pl.Float64,  # Kendall tau effect size (0-1)
+            "p_value": pl.Float64(),  # empirical p-value
+            "adj_p_jtk": pl.Float64(),  # Bonferroni JTK p (reference)
+            "period": pl.Float64(),  # hours
+            "phase_hours": pl.Float64(),  # hours to peak within cycle
+            "amplitude": pl.Float64(),  # Hodges-Lehmann amplitude
+            "tau": pl.Float64(),  # Kendall tau effect size (0-1)
+            "jtk_baseline": pl.Float64(),
+            "jtk_fitted": pl.List(pl.Float64()),
+            "lsq_baseline": pl.Float64(),
+            "lsq_amplitude": pl.Float64(),
+            "lsq_phase_hours": pl.Float64(),
+            "lsq_r_squared": pl.Float64(),
+            "lsq_n_cycles": pl.Float64(),
+            "lsq_fitted": pl.List(pl.Float64()),
         }
 
     def _ejtk_fit_single(
         self,
+        timepoints: np.ndarray,
         values: np.ndarray,
         periods: list[int],
         ref_cosines: dict,
@@ -125,13 +138,38 @@ class eJTK_CYCLE(OscillationBase):
             emp_p = float(np.mean(perm_taus >= obs_tau))
             emp_p = max(emp_p, 1.0 / n_perms)
 
+            period_hours = float(best_per) * interval
+            lag_hours = float(best_lag) * interval
+
+            # JTK-based curve
+            jtk_baseline, jtk_fitted = construct_raw_jtk_curve(
+                timepoints=timepoints,
+                values=values,
+                period=period_hours,
+                lag=lag_hours,
+                amplitude=amplitude,
+            )
+
+            # least squares
+            lsq = jtk_fixed_period_cosinor_regression(
+                timepoints=timepoints, values=values, period=period_hours
+            )
+
             return {
                 "p_value": emp_p,
                 "adj_p_jtk": adj_p,
-                "period": float(best_per) * interval,
-                "phase_hours": float(best_lag) * interval,
+                "period": period_hours,
+                "phase_hours": lag_hours,
                 "amplitude": amplitude,
                 "tau": obs_tau,
+                "jtk_baseline": jtk_baseline,
+                "jtk_fitted": jtk_fitted,
+                "lsq_baseline": lsq["baseline"],
+                "lsq_amplitude": lsq["amplitude"],
+                "lsq_phase_hours": lsq["phase_hours"],
+                "lsq_r_squared": lsq["r_squared"],
+                "lsq_n_cycles": lsq["n_cycles"],
+                "lsq_fitted": lsq["y_fit"],
             }
 
         except Exception:
