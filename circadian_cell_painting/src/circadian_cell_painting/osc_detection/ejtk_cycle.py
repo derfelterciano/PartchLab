@@ -8,12 +8,16 @@ from ._ejtk_cycle_tools import (
     _build_dist_params,
     compute_best_tau,
     init_ref_cosines,
+    _single_perm,
 )
 from ._ejtk_cycle_curve_fits import (
     construct_raw_jtk_curve,
     jtk_fixed_period_cosinor_regression,
 )
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from functools import partial
+import logging
+from tqdm import tqdm
 
 
 class eJTK_CYCLE(OscillationBase):
@@ -87,7 +91,7 @@ class eJTK_CYCLE(OscillationBase):
         dist_params: list[dict],
         interval: float,
         n_perms: int,
-        n_workers: int,
+        n_workers: int = 1,
         rng_seed: int = 123456789,
     ) -> dict | None:
         """
@@ -114,25 +118,48 @@ class eJTK_CYCLE(OscillationBase):
         try:
             rng = np.random.default_rng(seed=rng_seed)
 
+            logging.info("eJTK: Computing the best tau!")
             # observed stats
-            obs_tau, adj_p, best_per, best_lag, amplitude = compute_best_tau(
+            obs_tau, raw_p, adj_p, best_per, best_lag, amplitude = compute_best_tau(
                 values=values,
                 periods=periods,
                 ref_cosines=ref_cosines,
                 dist_params=dist_params,
             )
 
-            seeds = rng.integers(0, 2**32, size=n_perms)
+            seeds = rng.integers(0, 2**32, size=n_perms, dtype=int).tolist()
 
-            def _single_perm(seed: int) -> float:
-                perm_vals = np.random.default_rng(seed).permutation(values)
-                tau, _, _, _, _ = compute_best_tau(
-                    perm_vals, periods, ref_cosines, dist_params
+            # def _single_perm(seed: int) -> float:
+            #     logging.debug("eJTK: applying permutation to values!")
+
+            #     perm_vals = np.random.default_rng(seed).permutation(values)
+            #     tau, _, _, _, _ = compute_best_tau(
+            #         perm_vals, periods, ref_cosines, dist_params
+            #     )
+            #     return tau
+
+            # logging.info("eJTK: multithreading permutations")
+            # with ThreadPoolExecutor(max_workers=n_workers) as pool:
+            #     perm_taus = np.array(list(pool.map(_single_perm, seeds)))
+
+            if n_workers == 1:
+                perm_taus = np.array(
+                    [
+                        _single_perm(seed, values, periods, ref_cosines, dist_params)
+                        for seed in seeds
+                    ]
                 )
-                return tau
-
-            with ThreadPoolExecutor(max_workers=n_workers) as pool:
-                perm_taus = np.array(list(pool.map(_single_perm, seeds)))
+            else:
+                logging.info("eJTK: multithreading permutations")
+                with ProcessPoolExecutor(max_workers=n_workers) as pool:
+                    func = partial(
+                        _single_perm,
+                        values=values,
+                        periods=periods,
+                        ref_cosines=ref_cosines,
+                        dist_params=dist_params,
+                    )
+                    perm_taus = np.array(list(pool.map(func, seeds)))
 
             # empirical p-values
             emp_p = float(np.mean(perm_taus >= obs_tau))
@@ -141,6 +168,7 @@ class eJTK_CYCLE(OscillationBase):
             period_hours = float(best_per) * interval
             lag_hours = float(best_lag) * interval
 
+            logging.info("eJTK: Building curve fits")
             # JTK-based curve
             jtk_baseline, jtk_fitted = construct_raw_jtk_curve(
                 timepoints=timepoints,
@@ -172,7 +200,8 @@ class eJTK_CYCLE(OscillationBase):
                 "lsq_fitted": lsq["y_fit"],
             }
 
-        except Exception:
+        except Exception as e:
+            logging.exception(f"eJTK failure: {e}")
             return None
 
     def _jtk_init(self, n_timepoints: int) -> None:
@@ -186,13 +215,101 @@ class eJTK_CYCLE(OscillationBase):
         self._dist_params = _build_dist_params(n_timepoints)
 
     def fit(self, timepoints, values):
+        logging.info("Initalizing JTK")
+        timepoints = self.time_offset + (timepoints - self.start_index) * self.interval
         self._jtk_init(len(timepoints))
+
+        logging.info("Applying eJTK to a single feature!")
         return self._ejtk_fit_single(
+            timepoints=timepoints,
             values=values,
             periods=self.periods,
             ref_cosines=self._ref_cosines,
             dist_params=self._dist_params,
             interval=self.interval,
             n_perms=self.n_perms,
-            n_workers=self.n_workers,
         )
+
+    def fit_all(self, data, feature_col, time_col, value_col, stat=None, well=None):
+        """
+        Fits the model to ALL features (mainly meant for a single well)
+
+        args:
+            - data (pl.DataFrame): experiment data
+            - feature_col (str): the feature column in `data`
+            - time_col (str): the timepoint column in `data`
+            - value_col (str): the value points at each timepoint in `data`
+            - stat (str): the title of the metric being tested
+            - well (str): the name of the well being tested
+
+        returns:
+            (pl.DataFrame): a dataframe of all the results
+        """
+        features = data[feature_col].unique().to_list()
+        time = (
+            data.filter(pl.col(feature_col) == features[0])
+            .sort(time_col)[time_col]
+            .to_numpy()
+            .astype(np.float64)
+        )
+
+        feature_values = {}
+        for feat in features:
+            vals = (
+                data.filter(pl.col(feature_col) == feat)
+                .sort(time_col)[value_col]
+                .to_numpy()
+                .astype(np.float64)
+            )
+
+            if not np.all(vals == 0):
+                feature_values[feat] = vals
+
+        results = []
+
+        with ProcessPoolExecutor(max_workers=self.n_workers) as pool:
+            futures = {
+                pool.submit(self.fit, time, vals): feat
+                for feat, vals in feature_values.items()
+            }
+            for future in tqdm(
+                as_completed(futures), total=len(futures), desc="Processing features"
+            ):
+                feat = futures[future]
+                fit = future.result()
+                if fit is not None:
+                    results.append(
+                        {"WellName": well, feature_col: feat, "stat": stat, **fit}
+                    )
+
+        # for feat in tqdm(features, total=len(features), desc="Processing features"):
+        #     values = (
+        #         data.filter(pl.col(feature_col) == feat)
+        #         .sort(time_col)[value_col]
+        #         .to_numpy()
+        #         .astype(np.float64)
+        #     )
+
+        #     if np.all(values == 0):
+        #         fit = None
+        #     else:
+        #         fit = self.fit(timepoints=time, values=values)
+
+        #     if fit is not None:
+        #         results.append(
+        #             {"WellName": well, feature_col: feat, "stat": stat, **fit}
+        #         )
+
+        if len(results) == 0:
+            return pl.DataFrame()
+
+        well_df = pl.DataFrame(
+            results,
+            schema={
+                "WellName": pl.String,
+                feature_col: pl.String,
+                "stat": pl.String,
+                **self.result_schema,
+            },
+        )
+        return well_df

@@ -4,6 +4,7 @@ import numpy as np
 import math
 from scipy.stats import norm as scipy_norm
 from scipy.stats import false_discovery_control
+import logging
 
 _JTK_AMPFACTOR = np.sqrt(2)
 _JTK_PIHAT = round(np.pi, 4)
@@ -179,7 +180,7 @@ def init_ref_cosines(periods: list[int], n_timepoints: int) -> dict:
 
 def compute_best_tau(
     values: np.ndarray, periods: list[int], ref_cosines: dict, dist_params: dict
-) -> tuple[float, float, int, float, float]:
+) -> tuple[float, float, float, int, float, float]:
     """
     Computes the best tau across all (period, phase) combinations.
 
@@ -191,7 +192,7 @@ def compute_best_tau(
 
     Returns:
         tuple[float, float, int, float, float]:
-        (best_tau, bonferroni_adj_p, best_period_tp, best_lag_tp, best_amplitude)
+        (best_tau, best_raw_pvalue, bonferroni_adj_p, best_period_tp, best_lag_tp, best_amplitude)
     """
     n = len(values)
     z_out = np.sign(np.subtract.outer(values, values))
@@ -222,6 +223,7 @@ def compute_best_tau(
     best_tau = 0.0
     best_per = 0
     best_lag_h = 0.0
+    best_raw_p = 1.0
 
     for idx in np.where(best_mask)[0]:
         pi = all_pi[idx]
@@ -245,5 +247,14 @@ def compute_best_tau(
             best_tau = abs(S) / dp["max"]
             best_per = period
             best_lag_h = lag
+            best_raw_p = float(all_pvals[idx])
 
-    return best_tau, best_padj, best_per, best_lag_h, max(0.0, best_amp)
+    return best_tau, best_raw_p, best_padj, best_per, best_lag_h, max(0.0, best_amp)
+
+
+def _single_perm(seed, values, periods, ref_cosines, dist_params):
+    """Single permutation processing"""
+    logging.debug("eJTK: applying permutation to values!")
+    perm_vals = np.random.default_rng(seed).permutation(values)
+    tau, _, _, _, _, _ = compute_best_tau(perm_vals, periods, ref_cosines, dist_params)
+    return tau

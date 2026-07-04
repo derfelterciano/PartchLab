@@ -44,7 +44,7 @@ def jtk_fixed_period_cosinor_regression(
     baseline, A, B = coeffs
 
     amplitude = np.hypot(A, B)
-    phase = np.arctan(B, A)
+    phase = np.arctan2(B, A)
     phase_hours = (phase % (2 * np.pi)) / omega
 
     y_fit = X @ coeffs
