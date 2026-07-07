@@ -74,7 +74,9 @@ class VisualizerBase(ABC):
         ax.set_xlabel("Time (hours)")
         ax.set_ylabel(f"Detrended {self.results.stat}")
 
-    def get_significant(self, alpha: float | None = None) -> pl.DataFrame:
+    def get_significant(
+        self, alpha: float | None = None, filter_col: str = "p_adjusted"
+    ) -> pl.DataFrame:
         """
         Returns all results with p_adjusted values <= alpha.
         This filters out all the non-significant data giving you real
@@ -83,6 +85,8 @@ class VisualizerBase(ABC):
         args:
             - alpha (float | None): the alpha value to filter out the p-values
             by
+            - filter_col: str: the column to filter p-values from.
+            (default: "p_adjusted")
 
         returns:
             pl.DataFrame: all the results with p values <= alpha.
@@ -90,7 +94,7 @@ class VisualizerBase(ABC):
         threshold = alpha if alpha is not None else self.results.adj_alpha
         return (
             self.results.scan_results()
-            .filter(pl.col("p_adjusted") <= threshold)
+            .filter(pl.col(filter_col) <= threshold)
             .collect()
         )
 

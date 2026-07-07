@@ -152,6 +152,7 @@ def detect(
         data_path=file_path,
         correction_group=correction_group,
         start_time=start_time,
+        detector_name=type(detect).__name__,
         end_time=end_time,
         detector_params=detector.params,
     )
