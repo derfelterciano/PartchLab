@@ -67,11 +67,13 @@ P-values were adjusted within every replicate group (n=3 wells per group) across
     few minor tweaks
   - The dampened cosinor can be seen [here](https://www.biorxiv.org/content/10.1101/2022.07.04.498691v3) at equation `2.2`
 - ~~Implement `Lomb-Scargle` for period detection. We can only do this AFTER detrending.~~
+- [x] Implement `eJTK_CYCLE` since our data has period drift we need to use this
+      to everything more robust
 
 - [ ] Implement parallel genexpression analysis pipeline to cell painting pipline
   - [ ] Implement **fft's discrete cosinor transform**
     - This is just a method to detect the periods in the experiment.
     - We still need to implement this as a package
-  - [x] Implement `eJTK_CYCLE` since our data has period drift we need to use this
-        to everything more robust
-  - [ ] Use wavelet analysis from `pyBoat`
+    - This needs to be a CLI method
+  - [ ] Implement wavelet analysis from `pyBoat`
+    - [ ] Implement wavelet visualization

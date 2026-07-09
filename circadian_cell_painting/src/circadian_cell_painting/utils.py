@@ -10,13 +10,17 @@ from dataclasses import dataclass
 import polars as pl
 import pickle
 from typing import Any
+from matplotlib.axes import Axes
+import numpy as np
 
 
-def clean_folder(dir: Path) -> None:
+def clean_folder(dir: Path, delete_only: bool = False) -> None:
     if dir.exists():
         shutil.rmtree(dir)
         sleep(0.5)
-    dir.mkdir(parents=True, exist_ok=True)
+
+    if not delete_only:
+        dir.mkdir(parents=True, exist_ok=True)
 
 
 def cosinor_fitted_long(
@@ -108,3 +112,20 @@ class OscillationResults:
     def load_pickle(cls, path: Path) -> "OscillationResults":
         with open(path, "rb") as f:
             return pickle.load(f)
+
+
+def add_period_marks(ax: Axes, x_min: float, x_max: float, interval=12):
+    """
+    Adding specific period marks to circadian plots
+
+    Args:
+        ax (Axes): matplot lib Axes
+        x_min (float): the minimum x val
+        x_max (float): the maximum x val
+        interval (int, optional): interval to put tick marks at. Defaults to 12.
+    """
+    marks = np.arange(np.ceil(x_min / interval) * interval, x_max, interval)
+    for mark in marks:
+        ax.axvline(mark, color="gray", linewidth=0.5, linestyle=":", alpha=0.5)
+    ax.set_xticks(marks)
+    ax.set_xticklabels([f"{int(m)}h" for m in marks], fontsize=7)
