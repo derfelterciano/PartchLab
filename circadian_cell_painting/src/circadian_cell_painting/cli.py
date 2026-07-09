@@ -4,9 +4,11 @@ import typer
 from typing import Annotated
 import logging
 import shutil
+import polars as pl
 
 from .preprocessing.preprocess import preprocess_to_clean_signal
 from .utils import clean_folder
+from .gene_expression._cli_helpers import dct_process_file
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,8 +24,12 @@ app = typer.Typer(
 preprocess_data = typer.Typer(
     help="preprocesses cell painting data", no_args_is_help=True
 )
+dct_data = typer.Typer(
+    help="calculates the Discrete Cosinor Transform on RAW data", no_args_is_help=True
+)
 
 app.add_typer(preprocess_data)
+app.add_typer(dct_data)
 
 
 @preprocess_data.command()
@@ -103,6 +109,89 @@ def preprocess(
     #     exit(1)
 
     shutil.rmtree(dump_dir)  # TODO: uncomment this
+
+
+@dct_data.command()
+def dct(
+    data_path: Annotated[
+        str,
+        typer.Argument(
+            help="The path to your formatted data! " "(must be a tab-delimited format)"
+        ),
+    ],
+    platemap_path: Annotated[
+        str, typer.Argument(help="Path to the platemap file. (Must in an excel file)")
+    ],
+    output_dir: Annotated[
+        str,
+        typer.Argument(
+            help="the path to the output directory. (this will create a new "
+            "directory for your results to be stored in)"
+        ),
+    ],
+    well_column: Annotated[
+        str,
+        typer.Option(
+            "--well",
+            "-w",
+            help="specifies the column that contains the enVision wells",
+        ),
+    ],
+    timepoint_col: Annotated[
+        str,
+        typer.Option(
+            "--timepoint",
+            "-t",
+            help="Specifies the column that contains the timepoints",
+        ),
+    ],
+    expression_col: Annotated[
+        str,
+        typer.Option(
+            "--expression",
+            "-e",
+            help="This specifies the main data column. e.g. the column the "
+            "specifies the gene expression values.",
+        ),
+    ],
+    grouping_cols: Annotated[
+        list[str],
+        typer.Option(
+            "--groupings",
+            "-g",
+            help="Specifies the columns that contain meta information like "
+            "MoleculeID and such",
+        ),
+    ],
+    sampling_interval: Annotated[
+        float,
+        typer.Option(
+            "-i",
+            "--interval",
+            help="Specifies the sampling interval of the data being read. "
+            "i.e. every 1 hour, 2 hours etc.",
+        ),
+    ],
+    period_min: Annotated[
+        int, typer.Option("--period-min", help="The minimum period range in hours")
+    ] = 16,
+    period_max: Annotated[
+        int, typer.Option("--period-max", help="The minimum period range in hours")
+    ] = 48,
+):
+
+    period_range = (period_min, period_max)
+    dct_process_file(
+        data_path=data_path,
+        platemap_file=platemap_path,
+        out_dir=output_dir,
+        well_col=well_column,
+        timepoint_col=timepoint_col,
+        expression_col=expression_col,
+        grouping_cols=grouping_cols,
+        sampling_interval=sampling_interval,
+        period_range=period_range,
+    )
 
 
 if __name__ == "__main__":

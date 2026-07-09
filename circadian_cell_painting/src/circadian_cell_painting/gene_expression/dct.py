@@ -10,6 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 from ..utils import add_period_marks
+import logging
 
 
 def dct_period_detection(
@@ -59,6 +60,7 @@ def calculate_DCT(
     period_range: tuple[int, int] = (16, 48),
 ) -> None:
     clean_folder(out_directory)
+    logging.info("Cleaned directory!")
 
     best_periods = []
     well_periods = []
@@ -84,6 +86,7 @@ def calculate_DCT(
             all_amplitudes = []
             all_periods_mask = None
 
+            logging.info(f"Calculating wells for: {group_vals}")
             for well in group_wells:
                 well_data = (
                     group_df.filter(pl.col(well_col) == well)
@@ -175,6 +178,10 @@ def calculate_DCT(
             plt.tight_layout()
             pdf.savefig(fig)
             plt.close(fig)
+
+    logging.info("Figure generated!")
+
+    logging.info("Writing results to csv!")
 
     # write outputs
     per_well_periods = pl.DataFrame(well_periods)
