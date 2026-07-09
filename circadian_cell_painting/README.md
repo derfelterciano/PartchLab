@@ -71,9 +71,10 @@ P-values were adjusted within every replicate group (n=3 wells per group) across
       to everything more robust
 
 - [ ] Implement parallel genexpression analysis pipeline to cell painting pipline
-  - [ ] Implement **fft's discrete cosinor transform**
+  - [x] Implement **fft's discrete cosinor transform**
     - This is just a method to detect the periods in the experiment.
     - We still need to implement this as a package
     - This needs to be a CLI method
+  - [ ] Implement EnVision formatting pipeline
   - [ ] Implement wavelet analysis from `pyBoat`
     - [ ] Implement wavelet visualization
