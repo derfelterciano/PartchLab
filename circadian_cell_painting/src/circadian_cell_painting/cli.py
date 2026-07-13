@@ -5,12 +5,18 @@ from typing import Annotated
 import logging
 import shutil
 import polars as pl
+from enum import Enum
 
 from .preprocessing.preprocess import preprocess_to_clean_signal
 from .utils import clean_folder
 from .gene_expression._cli_helpers import dct_process_file
+from .formatters import format_envision
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - [%(levelname)s] -> %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 app = typer.Typer(
@@ -27,9 +33,16 @@ preprocess_data = typer.Typer(
 dct_data = typer.Typer(
     help="calculates the Discrete Cosinor Transform on RAW data", no_args_is_help=True
 )
+formatter = typer.Typer(
+    help="Formats the raw outputs from equipment into a unified file fromat",
+    no_args_is_help=True,
+)
 
 app.add_typer(preprocess_data)
 app.add_typer(dct_data)
+app.add_typer(formatter)
+
+# -- File preprocessing
 
 
 @preprocess_data.command()
@@ -109,6 +122,9 @@ def preprocess(
     #     exit(1)
 
     shutil.rmtree(dump_dir)  # TODO: uncomment this
+
+
+# -- DCT calculations
 
 
 @dct_data.command()
@@ -192,6 +208,56 @@ def dct(
         sampling_interval=sampling_interval,
         period_range=period_range,
     )
+
+    return None
+
+
+# -- Formatting
+
+
+class EquipmentType(str, Enum):
+    envision = "envision"
+    phenix = "phenix"
+
+
+@formatter.command()
+def formatter(
+    input_path: Annotated[
+        str,
+        typer.Argument(
+            help="Path to raw data. The input type depends on the equipment"
+            "you're using but most of the time it will just require directory"
+            "for the intput"
+        ),
+    ],
+    output_file: Annotated[
+        str,
+        typer.Argument(
+            help="The output file (with its path). "
+            "This must end in .txt or .tsv! i.e. /path/to/file.txt"
+        ),
+    ],
+    sampling_interval: Annotated[
+        float,
+        typer.Option(
+            "--sampling-interval",
+            "-s",
+            help="The sampling interval of the experiment.",
+        ),
+    ],
+    equipment_type: Annotated[
+        EquipmentType,
+        typer.Option("--type", help="Specified the equipment used for the data."),
+    ],
+):
+    if equipment_type == EquipmentType.envision:
+        format_envision(
+            in_dir=Path(input_path),
+            out_file=Path(output_file),
+            sampling_interval=sampling_interval,
+        )
+    elif equipment_type == EquipmentType.phenix:
+        logging.error("This feature is not yet implemented!")
 
 
 if __name__ == "__main__":
