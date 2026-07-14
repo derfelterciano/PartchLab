@@ -14,7 +14,7 @@ from .formatters import format_envision
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - [%(levelname)s] -> %(message)s",
+    format="%(asctime)s - [%(levelname)s]: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
@@ -217,7 +217,7 @@ def dct(
 
 class EquipmentType(str, Enum):
     envision = "envision"
-    phenix = "phenix"
+    harmony = "harmony"
 
 
 @formatter.command()
@@ -256,7 +256,7 @@ def formatter(
             out_file=Path(output_file),
             sampling_interval=sampling_interval,
         )
-    elif equipment_type == EquipmentType.phenix:
+    elif equipment_type == EquipmentType.harmony:
         logging.error("This feature is not yet implemented!")
 
 
