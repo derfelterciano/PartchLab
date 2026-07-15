@@ -14,7 +14,13 @@ from matplotlib.axes import Axes
 import numpy as np
 
 
-def clean_folder(dir: Path, delete_only: bool = False) -> None:
+def clean_folder(
+    dir: Path, delete_only: bool = False, create_only: bool = False
+) -> None:
+    if create_only:
+        dir.mkdir(parents=True, exist_ok=True)
+        return
+
     if dir.exists():
         shutil.rmtree(dir)
         sleep(0.5)

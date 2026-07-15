@@ -10,7 +10,7 @@ from enum import Enum
 from .preprocessing.preprocess import preprocess_to_clean_signal
 from .utils import clean_folder
 from .gene_expression._cli_helpers import dct_process_file
-from .formatters import format_envision
+from .formatters import format_envision, process_harmony
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,9 +38,9 @@ formatter = typer.Typer(
     no_args_is_help=True,
 )
 
-app.add_typer(preprocess_data)
-app.add_typer(dct_data)
-app.add_typer(formatter)
+app.add_typer(preprocess_data, name="preprocess")
+app.add_typer(dct_data, name="dct")
+app.add_typer(formatter, name="formatter")
 
 # -- File preprocessing
 
@@ -215,15 +215,10 @@ def dct(
 # -- Formatting
 
 
-class EquipmentType(str, Enum):
-    envision = "envision"
-    harmony = "harmony"
-
-
 @formatter.command()
-def formatter(
+def envision(
     input_path: Annotated[
-        str,
+        Path,
         typer.Argument(
             help="Path to raw data. The input type depends on the equipment"
             "you're using but most of the time it will just require directory"
@@ -231,7 +226,7 @@ def formatter(
         ),
     ],
     output_file: Annotated[
-        str,
+        Path,
         typer.Argument(
             help="The output file (with its path). "
             "This must end in .txt or .tsv! i.e. /path/to/file.txt"
@@ -245,19 +240,78 @@ def formatter(
             help="The sampling interval of the experiment.",
         ),
     ],
-    equipment_type: Annotated[
-        EquipmentType,
-        typer.Option("--type", help="Specified the equipment used for the data."),
-    ],
 ):
-    if equipment_type == EquipmentType.envision:
-        format_envision(
-            in_dir=Path(input_path),
-            out_file=Path(output_file),
-            sampling_interval=sampling_interval,
-        )
-    elif equipment_type == EquipmentType.harmony:
-        logging.error("This feature is not yet implemented!")
+    format_envision(
+        in_dir=input_path,
+        out_file=output_file,
+        sampling_interval=sampling_interval,
+    )
+
+
+@formatter.command()
+def harmony(
+    input_dir: Annotated[
+        Path,
+        typer.Argument(
+            help="path to single root Harmony dataset. This will be a directory"
+            ", not a specific file."
+        ),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Argument(
+            help="The directory to where the file will be placed."
+            "This is just the directory don't name it a certain file"
+        ),
+    ],
+    timepoint_col: Annotated[
+        str,
+        typer.Option(
+            "--timepoint", "-t", help="Specifies the timepoint column in data."
+        ),
+    ],
+    sampling_interval: Annotated[
+        float,
+        typer.Option(
+            "--sampling-interval",
+            "-s",
+            help="The sampling interval of the experiment.",
+        ),
+    ],
+    header_row_index: Annotated[
+        int,
+        typer.Option(
+            "--header-index",
+            help="Specified the row in the raw file where the headers are located",
+        ),
+    ] = 9,
+    intermediate_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--intermediate",
+            "-i",
+            help="Specifies a path to put the intermediate files. Specifing "
+            "this option prevents the files from being deleted",
+        ),
+    ] = None,
+    replace_dir: Annotated[
+        bool,
+        typer.Option(
+            "--replace",
+            help="This will delete the specified output directory (if it "
+            "exists) and then create a new directory.",
+        ),
+    ] = False,
+):
+    process_harmony(
+        in_path=input_dir,
+        out_dir=output_dir,
+        timepoint_col=timepoint_col,
+        sampling_interval=sampling_interval,
+        header_row_index=header_row_index,
+        intermediate_dir=intermediate_dir,
+        replace_dir=replace_dir,
+    )
 
 
 if __name__ == "__main__":
