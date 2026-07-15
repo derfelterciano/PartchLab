@@ -38,8 +38,8 @@ formatter = typer.Typer(
     no_args_is_help=True,
 )
 
-app.add_typer(preprocess_data, name="preprocess")
-app.add_typer(dct_data, name="dct")
+app.add_typer(preprocess_data)
+app.add_typer(dct_data)
 app.add_typer(formatter, name="formatter")
 
 # -- File preprocessing
