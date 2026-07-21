@@ -135,3 +135,7 @@ def add_period_marks(ax: Axes, x_min: float, x_max: float, interval=12):
         ax.axvline(mark, color="gray", linewidth=0.5, linestyle=":", alpha=0.5)
     ax.set_xticks(marks)
     ax.set_xticklabels([f"{int(m)}h" for m in marks], fontsize=7)
+
+
+def retrieve_wells(data: pl.DataFrame, well_col: str) -> list[str]:
+    return data[well_col].unique().to_list()

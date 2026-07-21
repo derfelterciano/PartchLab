@@ -143,7 +143,7 @@ class WaveletAnalyzer:
             well_df = dataset.filter(pl.col(well_col) == well).sort(timepoint_col)
             signal = well_df[stat_val].to_numpy()
             tpoints = well_df[timepoint_col].to_numpy()
-            group = (
+            group = str(
                 well_df[name_col].unique().item()
             )  # TODO: Change this to take multiple columns
 
@@ -178,7 +178,7 @@ class WaveletAnalyzer:
                     "std_amplitude": ridge["amplitude"].std(),
                     "median_amplitude": ridge["amplitude"].median(),
                     "mid_phase": ridge["phase"].iloc[mid_idx],
-                    "peak_fourier_period": self.periods[np.argmax(fourier_power)],
+                    "peak_fourier_period": self.period_axis[np.argmax(fourier_power)],
                 }
             )
 
@@ -194,6 +194,34 @@ class WaveletAnalyzer:
             periods=self.period_axis,
             summary_df=pl.DataFrame(summary_rows),
         )
+
+    def visualize_all(
+        self,
+        wavelet_results: WaveletResults,
+        dataset: pl.DataFrame,
+        well_list: list[str],
+        well_col: str,
+        name_col: str,
+        stat_val: str,
+        timepoint_col: str,
+        output_file: Path,
+    ) -> None:
+        """
+        Outputs a pdf file of each well visualized
+        """
+
+        with PdfPages(output_file) as pdf:
+            for fig in self.visualize(
+                wavelet_results=wavelet_results,
+                dataset=dataset,
+                well_list=well_list,
+                well_col=well_col,
+                name_col=name_col,
+                stat_val=stat_val,
+                timepoint_col=timepoint_col,
+            ):
+                pdf.savefig(fig)
+                plt.close(fig)
 
     def visualize(
         self,
@@ -320,7 +348,8 @@ class WaveletAnalyzer:
         ridge_df = wavelet_res.ridge_df
 
         replicate_agg = (
-            ridge_df.group_by([name_col, timepoint_col])
+            ridge_df.with_columns(pl.col(name_col).cast(pl.String).fill_null("nan"))
+            .group_by([name_col, timepoint_col])
             .agg(
                 [
                     *[pl.col(m).mean().alias(f"{m}_mean") for m in metrics],
