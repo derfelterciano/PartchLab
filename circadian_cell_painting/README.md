@@ -70,6 +70,8 @@ P-values were adjusted within every replicate group (n=3 wells per group) across
 - ~~Implement `Lomb-Scargle` for period detection. We can only do this AFTER detrending.~~
 - [x] Implement `eJTK_CYCLE` since our data has period drift we need to use this
       to everything more robust
+- [ ] Implement network analysis of features (WGCNA)
+  - Use the following [link](https://gds-yazarlab.bilkent.edu.tr/wp-content/uploads/YeastTutorialHorvath.pdf) for time series data on WGCNA
 
 - [ ] Implement parallel genexpression analysis pipeline to cell painting pipline
   - [x] Implement **fft's discrete cosinor transform**
@@ -77,5 +79,5 @@ P-values were adjusted within every replicate group (n=3 wells per group) across
     - We still need to implement this as a package
     - This needs to be a CLI method
   - [x] Implement EnVision formatting pipeline
-  - [ ] Implement wavelet analysis from `pyBoat`
-    - [ ] Implement wavelet visualization
+  - [x] Implement wavelet analysis from `pyBoat`
+    - [x] Implement wavelet visualization
