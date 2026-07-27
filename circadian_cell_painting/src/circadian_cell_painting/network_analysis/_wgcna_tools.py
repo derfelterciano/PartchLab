@@ -262,3 +262,238 @@ def topological_overlap_matrix(adjacency: np.ndarray) -> np.ndarray:
 
     tom = np.clip(tom, 0.0, 1.0)
     return tom
+
+
+# -- Module detection
+
+
+def detect_modules(
+    tom: np.ndarray,
+    feature_names: list[str],
+    min_module_size: int = 30,
+    cut_height: float | None = None,
+    linkage_method: str = "average",
+) -> dict[str, int]:
+    """
+    Hierarchical clustering + simplified dynamic tree cut on TOM
+    dissimilarity (1 - TOM). Clusters smaller than min_module_size are
+    reassigned to module 0 (the "unassigned/grey" module, per WGCNA
+    convention — not every feature belongs to a meaningful module).
+
+    Args:
+        tom (np.ndarray): topological overlap matrix (feature x feature)
+        feature_names (list[str]): names aligned with tom's rows/cols
+        min_module_size (int, optional): minimum features to keep a module. Defaults to 30.
+        cut_height (float | None, optional): dendrogram cut height, 0-1 dissimilarity
+            scale. If None, searches for the height giving the most valid
+            modules meeting min_module_size.. Defaults to None.
+        linkage_method (str, optional): scipy linkage method.
+            Defaults to 'average'.
+
+    Returns:
+        dict[str, str]: {feature_name: module_id}, 0 = unassigned
+    """
+
+    dissimilarity = 1 - tom
+    np.fill_diagonal(dissimilarity, 0.0)
+    dissimilarity = (dissimilarity + dissimilarity.T) / 2  # enforce exact symmetry
+
+    condensed = squareform(dissimilarity, checks=False)
+    Z = linkage(condensed, method=linkage_method)
+
+    if cut_height is None:
+        # look for candidate heights which gives the most modules
+        # that is still above the min module size threshold
+        candidate_heights = np.linspace(0.1, 0.99, 35)
+        best_height = candidate_heights[-1]
+        best_n_valid_modules = -1
+
+        for h in candidate_heights:
+            labels = fcluster(Z, t=h, criterion="distance")
+            _, counts = np.unique(labels, return_counts=True)
+            n_valid = int(np.sum(counts >= min_module_size))
+            if n_valid > best_n_valid_modules:
+                best_n_valid_modules = n_valid
+                best_height = h
+
+        cut_height = best_height
+
+    labels = fcluster(Z, t=cut_height, criterion="distance")
+
+    # lets combine all the small clusters to module 0
+    unique_labels, counts = np.unique(labels, return_counts=True)
+    small_labels = set(unique_labels[counts < min_module_size])
+
+    # relabel surviving modules to consecutive ints starting at 1
+    surviving_labels = sorted(l for l in unique_labels if l not in small_labels)
+    relabel_map = {old: new for new, old in enumerate(surviving_labels, start=1)}
+
+    module_assignments = {}
+    for feat, lbl in zip(feature_names, labels):
+        module_assignments[feat] = relabel_map.get(lbl, 0)
+
+    return module_assignments
+
+
+def merge_similar_modules(
+    module_assignments: dict[str, int],
+    matrix: np.ndarray,
+    feature_names: list[str],
+    merge_cut_height: float = 0.75,
+) -> dict[str, int]:
+    """
+    Merges modules whose eigengenes correlate above merge_cut_height,
+    since near-identical eigengenes usually indicate the cut height split
+    one real module into two pieces, not two distinct biological modules.
+
+    Args:
+        module_assignments (dict[str, int]): the cluster labels
+        matrix (np.ndarray): data matrix
+        feature_names (list[str]): feature list
+        merge_cut_height (float, optional): the threshold for correlations to be
+            above. Defaults to 0.75.
+
+    Returns:
+        dict[str, int]: {feature: new label id}
+    """
+    module_ids = sorted(set(v for v in module_assignments.values() if v != 0))
+    if len(module_ids) < 2:
+        return module_ids
+
+    feat_to_idx = {f: i for i, f in enumerate(feature_names)}
+
+    # compute eigengene per current module
+    eigengenes = {}
+    for mod_id in module_ids:
+        member_feats = [f for f, m in module_assignments.items() if m == mod_id]
+        idx = [feat_to_idx[f] for f in member_feats if f in feat_to_idx]
+        if len(idx) < 2:
+            continue
+        eigengene, _, _ = compute_eigengene(
+            matrix[idx, :]
+        )  # features as rows oriantation
+        eigengenes[mod_id] = eigengene
+
+    if len(eigengenes) < 2:
+        return module_assignments
+
+    # cluster eigengenes to find duplicates
+    mod_ids_with_eigen = list(eigengenes.keys())
+    eig_matrix = np.column_stack([eigengenes[m] for m in mod_ids_with_eigen])
+    eig_corr = np.corrcoef(eig_matrix, rowvar=False)
+    eig_corr = np.nan_to_num(eig_corr, nan=0.0)
+
+    dissimilarity = 1 - np.abs(eig_corr)
+    np.fill_diagonal(dissimilarity, 0.0)
+    dissimilarity = (dissimilarity + dissimilarity.T) / 2
+
+    if dissimilarity.shape[0] < 2:
+        return module_assignments
+
+    condensed = squareform(dissimilarity, checks=False)
+    Z = linkage(condensed, method="average")
+    merge_labels = fcluster(Z, t=(1 - merge_cut_height), criterion="distance")
+
+    merge_map = {
+        mod_ids_with_eigen[i]: int(merge_labels[i])
+        for i in range(len(mod_ids_with_eigen))
+    }
+
+    updated = {
+        feat: merge_map.get(mod_id, mod_id)
+        for feat, mod_id in module_assignments.items()
+    }
+
+    return updated
+
+
+def compute_eigengene(
+    module_matrix: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    """
+
+    Args:
+        module_matrix (np.ndarray): (n_module_features, n_timepoints),
+            features as rows, already z-scored
+
+    Returns:
+        tuple[float, float, float]:
+            eigengene (np.ndarray): (n_timepoints,) — one score per timepoint
+            loadings (np.ndarray): (n_module_features,) — feature weights
+            variance_explained (float): fraction of variance PC1 captures
+    """
+
+    # center each feature (row) - should be already ~0 mean from z-scoring
+    centered = module_matrix - module_matrix.mean(axis=1, keepdims=True)
+
+    # SVD on feat x timepoints: U holds feat loadings
+    # VT holds per timepoint componenet scores
+    u, s, vt = np.linalg.svd(centered, full_matrices=False)
+
+    pc1_loadings = u[:, 0]
+    pc1_scores = vt[0, :] * s[0]
+
+    variance_explained = float((s[0] ** 2) / np.sum(s**2)) if np.sum(s**2) > 0 else 0.0
+
+    # sign_convention: eigenegen should positively correlate with
+    # average of member features
+    avg_features = centered.mean(axis=0)
+
+    if np.corrcoef(pc1_scores, avg_features)[0, 1] < 0:
+        pc1_scores = -1 * pc1_scores
+        pc1_loadings = -1 * pc1_loadings
+
+    return pc1_scores, pc1_loadings, variance_explained
+
+
+def module_membership(
+    matrix: np.ndarray, feature_names: list[str], module_assignments: dict[str, int]
+) -> pl.DataFrame:
+    """
+    Computes module membership (kME) — correlation of each feature to its
+    own module's eigengene. High kME identifies "hub" features.
+
+    Args:
+        matrix (np.ndarray): (n_features, n_timepoints), features as rows
+        feature_names (list[str]): names aligned with matrix's rows
+        module_assignments (dict[str, int]): {feature: module_id}
+
+    Returns:
+        pl.DataFrame: columns = [feature, module_id, kME, variance_explained]
+    """
+
+    feat_to_idx = {f: i for i, f in enumerate(feature_names)}
+    module_ids = sorted(set(v for v in module_assignments.values() if v != 0))
+
+    rows = []
+    for mod_id in module_ids:
+        member_feats = [f for f, m in module_assignments.items() if m == mod_id]
+        idx = [feat_to_idx[f] for f in member_feats if f in feat_to_idx]
+        if len(idx) < 2:
+            continue
+
+        eigengene, _, var_exp = compute_eigengene(matrix[idx, :])  # grab module's feats
+
+        for feat, row_idx in zip(member_feats, idx):
+            kme = np.corrcoef(matrix[row_idx, :], eigengene)[0, 1]  # correlate feat
+            rows.append(
+                {
+                    "feature": feat,
+                    "module_id": mod_id,
+                    "kME": kme,
+                    "variance_explained": var_exp,
+                }
+            )
+
+    for feat, mod_id in module_assignments.items():
+        if mod_id == 0:
+            rows.append(
+                {
+                    "feature": feat,
+                    "module_id": 0,
+                    "kME": np.nan,
+                    "variance_explained": np.nan,
+                }
+            )
+
+    return pl.DataFrame(rows)
