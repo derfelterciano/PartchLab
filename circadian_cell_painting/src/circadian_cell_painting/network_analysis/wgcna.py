@@ -236,3 +236,122 @@ class WGCNAAnalyzer:
         """generates a Dataframe to choose a threshold from"""
         corr = correlation_matrix(assembled.matrix, method=self.correlation_method)
         return _pick_soft_threshold(corr, powers=powers, signed=self.signed)
+
+    def analyze(
+        self, assembled: AssembledMatrix, edge_threshold: float = 0.1
+    ) -> WGCNAResults:
+        """
+        Runs the full pipeline for ONE assembled group
+
+        Args:
+            assembled (AssembledMatrix): output of assemble_matrix()
+            edge_threshold (float, optional): minimum TOM weight for an edge to be
+                kept in edge_df — a dense feature x feature graph is
+                unreadable/enormous even for a few hundred features, so
+                only edges above this weight are exported. Defaults to 0.1.
+
+        Returns:
+            WGCNAResults: An object to store the results of WGCNA analysis
+        """
+
+        if self.soft_power is None:
+            raise ValueError(
+                "soft_power is not set. Call pick_soft_threshold() first, "
+                "inspect the scale-free table/plot, and set analyzer.soft_power"
+            )
+
+        matrix = assembled.matrix
+        feature_names = assembled.feature_names
+
+        logging.info(f"[{assembled.group_key}] computing correlation matrix")
+        corr = correlation_matrix(matrix=matrix, method=self.correlation_method)
+
+        logging.info(
+            f"[{assembled.group_key}] building adjacency matrix"
+            f"(power={self.soft_power})"
+        )
+        adj = adjacency_matrix(corr, power=self.soft_power, signed=self.signed)
+
+        logging.info(f"[{assembled.group_key}] computing TOM")
+        tom = topological_overlap_matrix(adj)
+
+        logging.info(f"[{assembled.group_key}] detecting modules")
+        module_assignments = detect_modules(
+            tom, feature_names, min_module_size=self.min_module_size
+        )
+        module_assignments = merge_similar_modules(
+            module_assignments,
+            matrix,
+            feature_names,
+            merge_cut_height=self.merge_cut_height,
+        )
+
+        logging.info(f"[{assembled.group_key}] computing eigengenes + membership")
+        membership_df = module_membership(matrix, feature_names, module_assignments)
+        membership_df = membership_df.with_columns(
+            pl.list(assembled.group_key).alias("group_key")
+        )
+
+        # -- edge list
+        logging.info(
+            f"[{assembled.group_key}] building edge list (thresh={edge_threshold})"
+        )
+        n = len(feature_names)
+        upper_i, upper_j = np.triu_indices(n, k=1)
+        weights = tom[upper_i, upper_j]
+
+        keep = weights > edge_threshold
+        edge_df = pl.DataFrame(
+            {
+                "feature_a": [feature_names[i] for i in upper_i[keep]],
+                "feature_b": [feature_names[j] for j in upper_j[keep]],
+                "weight": weights[keep],
+                "group_key": assembled.group_key,
+            }
+        )
+
+        # -- eigengenes
+        module_ids = sorted(set(v for v in module_assignments.values() if v != 0))
+        feat_to_idx = {f: i for i, f in enumerate(feature_names)}
+        col_info_records = assembled.col_info.to_dicts()
+
+        eigengene_rows = []
+        for mod_id in module_ids:
+            member_feats = [f for f, m in module_assignments.items() if m == mod_id]
+            idx = [feat_to_idx[f] for f in member_feats if f in feat_to_idx]
+            if len(idx) < 2:
+                continue
+            eigengene, _, _ = compute_eigengene(matrix[idx, :])
+
+            for col_idx, score in enumerate(eigengene):
+                info = col_info_records[col_idx]
+                eigengene_rows.append(
+                    {
+                        "group_key": assembled.group_key,
+                        "well": info["well"],
+                        "timepoint": info["timepoint"],
+                        "feature": f"Module_{mod_id}",
+                        "value": score,
+                    }
+                )
+
+        eigengene_df = (
+            pl.DataFrame(eigengene_rows)
+            if eigengene_rows
+            else pl.DataFrame(
+                schema={
+                    "group_key": pl.String,
+                    "well": pl.String,
+                    "timepoint": pl.Float64,
+                    "feature": pl.String,
+                    "value": pl.Float64,
+                }
+            )
+        )
+
+        return WGCNAResults(
+            module_df=membership_df,
+            eigengene_df=eigengene_df,
+            edge_df=edge_df,
+            params=self.params,
+        )
