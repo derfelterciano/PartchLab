@@ -64,3 +64,8 @@ Here's the full architecture, organized by file and responsibility:
 
 Everything in step 2-5 is what we tested against synthetic data — the only piece not yet built is the glue code connecting `eigengene_df` to `detect()`'s expected input shape.
 """
+
+from .wgcna import WGCNAAnalyzer
+from .dataclasses import WGCNAResults
+
+__all__ = ["WGCNAAnalyzer", "WGCNAResults"]

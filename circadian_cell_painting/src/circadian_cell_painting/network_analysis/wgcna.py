@@ -355,3 +355,63 @@ class WGCNAAnalyzer:
             edge_df=edge_df,
             params=self.params,
         )
+
+    def analyze_all(
+        self,
+        dataset: pl.DataFrame,
+        well_col: str,
+        timepoint_col: str,
+        feature_col: str,
+        value_col: str,
+        platemap: pl.DataFrame | None = None,
+        group_col: str | None = None,
+        edge_threshold: float = 0.1,
+    ) -> WGCNAResults:
+        """
+        Full pipeline across ALL groups (or all wells, if ungrouped).
+        Requires self.soft_power already set.
+
+        Args:
+            dataset (pl.DataFrame): long format — well_col, timepoint_col,
+                feature_col, value_col
+            well_col (str): Column for Well Names
+            timepoint_col (str): Column for timepoints
+            feature_col (str): Column for features
+            value_col (str): Column for value metrics such as median, mean q0 etc.
+            platemap (pl.DataFrame | None, optional): well metadata. Must contain
+                group_col and well_col if grouping is desired. Defaults to None.
+            group_col (str | None, optional): platemap column defining
+                replicate groups. Defaults to None.
+            edge_threshold (float, optional): min TOM weight kept in edge_df.
+                Defaults to 0.1.
+
+        Returns:
+            WGCNAResults: _description_
+        """
+
+        assembled_list = self.assemble_matrix(
+            dataset=dataset,
+            well_col=well_col,
+            timepoint_col=timepoint_col,
+            feature_col=feature_col,
+            value_col=value_col,
+            platemap=platemap,
+            group_col=group_col,
+        )
+
+        module_dfs = []
+        eigengene_dfs = []
+        edge_dfs = []
+
+        for assembled in assembled_list:
+            result = self.analyze(assembled, edge_threshold=edge_threshold)
+            module_dfs.append(result.module_df)
+            eigengene_dfs.append(result.eigengene_df)
+            edge_dfs.append(result.edge_df)
+
+        return WGCNAResults(
+            module_df=pl.concat(module_dfs, how="diagonal_relaxed"),
+            eigengene_df=pl.concat(eigengene_dfs, how="diagonal_relaxed"),
+            edge_df=pl.concat(edge_dfs, how="diagonal_relaxed"),
+            params=self.params,
+        )
